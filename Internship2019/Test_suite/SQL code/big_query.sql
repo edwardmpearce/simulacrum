@@ -9,7 +9,9 @@ FROM
     LEFT JOIN IMD.ID2015 multi_depr_index
     ON at_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE ),
 
-population_sim AS (SELECT * FROM analysispaulclarke.sim_av_tumour_final),
+population_sim AS 
+(SELECT * FROM analysispaulclarke.sim_av_tumour_final),
+-- (SELECT * FROM analysispaulclarke.sim_av_tumour),
 
 r AS
 (SELECT 'GRADE' AS column_name, TO_CHAR(GRADE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY GRADE UNION ALL SELECT 'AGE' AS column_name, TO_CHAR(AGE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY AGE UNION ALL SELECT 'SEX' AS column_name, TO_CHAR(SEX) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY SEX UNION ALL SELECT 'CREG_CODE' AS column_name, TO_CHAR(CREG_CODE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY CREG_CODE UNION ALL SELECT 'SCREENINGSTATUSFULL_CODE' AS column_name, TO_CHAR(SCREENINGSTATUSFULL_CODE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY SCREENINGSTATUSFULL_CODE UNION ALL SELECT 'ER_STATUS' AS column_name, TO_CHAR(ER_STATUS) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY ER_STATUS UNION ALL SELECT 'ER_SCORE' AS column_name, TO_CHAR(ER_SCORE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY ER_SCORE UNION ALL SELECT 'PR_STATUS' AS column_name, TO_CHAR(PR_STATUS) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY PR_STATUS UNION ALL SELECT 'PR_SCORE' AS column_name, TO_CHAR(PR_SCORE) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY PR_SCORE UNION ALL SELECT 'HER2_STATUS' AS column_name, TO_CHAR(HER2_STATUS) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY HER2_STATUS UNION ALL SELECT 'CANCERCAREPLANINTENT' AS column_name, TO_CHAR(CANCERCAREPLANINTENT) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY CANCERCAREPLANINTENT UNION ALL SELECT 'PERFORMANCESTATUS' AS column_name, TO_CHAR(PERFORMANCESTATUS) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY PERFORMANCESTATUS UNION ALL SELECT 'CNS' AS column_name, TO_CHAR(CNS) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY CNS UNION ALL SELECT 'ACE27' AS column_name, TO_CHAR(ACE27) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY ACE27 UNION ALL SELECT 'GLEASON_PRIMARY' AS column_name, TO_CHAR(GLEASON_PRIMARY) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY GLEASON_PRIMARY UNION ALL SELECT 'GLEASON_SECONDARY' AS column_name, TO_CHAR(GLEASON_SECONDARY) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY GLEASON_SECONDARY UNION ALL SELECT 'GLEASON_TERTIARY' AS column_name, TO_CHAR(GLEASON_TERTIARY) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY GLEASON_TERTIARY UNION ALL SELECT 'GLEASON_COMBINED' AS column_name, TO_CHAR(GLEASON_COMBINED) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY GLEASON_COMBINED UNION ALL SELECT 'DATE_FIRST_SURGERY' AS column_name, TO_CHAR(DATE_FIRST_SURGERY) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY DATE_FIRST_SURGERY UNION ALL SELECT 'LATERALITY' AS column_name, TO_CHAR(LATERALITY) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY LATERALITY UNION ALL SELECT 'QUINTILE_2015' AS column_name, TO_CHAR(QUINTILE_2015) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY QUINTILE_2015 UNION ALL SELECT 'DIAGNOSISDATEBEST' AS column_name, TO_CHAR(DIAGNOSISDATEBEST) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY DIAGNOSISDATEBEST UNION ALL SELECT 'SITE_ICD10_O2' AS column_name, TO_CHAR(SITE_ICD10_O2) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY SITE_ICD10_O2 UNION ALL SELECT 'SITE_ICD10_O2_3CHAR' AS column_name, TO_CHAR(SITE_ICD10_O2_3CHAR) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY SITE_ICD10_O2_3CHAR UNION ALL SELECT 'MORPH_ICD10_O2' AS column_name, TO_CHAR(MORPH_ICD10_O2) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY MORPH_ICD10_O2 UNION ALL SELECT 'BEHAVIOUR_ICD10_O2' AS column_name, TO_CHAR(BEHAVIOUR_ICD10_O2) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY BEHAVIOUR_ICD10_O2 UNION ALL SELECT 'T_BEST' AS column_name, TO_CHAR(T_BEST) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY T_BEST UNION ALL SELECT 'N_BEST' AS column_name, TO_CHAR(N_BEST) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY N_BEST UNION ALL SELECT 'M_BEST' AS column_name, TO_CHAR(M_BEST) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY M_BEST UNION ALL SELECT 'STAGE_BEST' AS column_name, TO_CHAR(STAGE_BEST) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY STAGE_BEST UNION ALL SELECT 'STAGE_BEST_SYSTEM' AS column_name, TO_CHAR(STAGE_BEST_SYSTEM) AS val, COUNT(*) AS counts_real FROM population_real GROUP BY STAGE_BEST_SYSTEM),
@@ -35,20 +37,27 @@ pop_sizes AS (SELECT * FROM
 proportions AS
 (SELECT col_name, val, counts_r, counts_s,
 counts_r/total_real AS proportion_r,
-counts_s/total_sim AS proportion_s
+counts_s/total_sim AS proportion_s,
+counts_s/total_sim - counts_r/total_real AS abs_diff,
+CASE WHEN counts_r = 0 THEN NULL
+    ELSE (counts_s * total_real)/(counts_r * total_sim) - 1
+    END AS rel_diff,
+(counts_r + counts_s)/(total_real + total_sim) AS average
 FROM all_counts, pop_sizes),
 
 results AS
-(SELECT col_name, val, counts_r, counts_s, proportion_r, proportion_s,
+(SELECT col_name, val, counts_r, counts_s, proportion_r, proportion_s, abs_diff, rel_diff, average,
 CASE WHEN proportion_r = 0 THEN NULL
     ELSE (counts_s - total_sim * proportion_r)/SQRT(total_sim * proportion_r * (1 - proportion_r))
-    END AS binom_z_test,
+    END AS binom_z_test_one_sample,
 CASE WHEN proportion_r = 0 THEN NULL
     WHEN (total_sim > 9 * (1 - proportion_r)/proportion_r AND total_sim > 9 * proportion_r / (1 - proportion_r)) THEN 1
     ELSE 0
-    END AS z_approx_valid,
+    END AS one_sample_z_approx_valid,
+abs_diff/SQRT(average * (1 - average) * ((total_real + total_sim)/(total_real * total_sim))) 
+AS z_test_two_sample_pooled,
 CASE WHEN counts_r = 0 THEN NULL
-    ELSE (counts_s - counts_r)*(counts_s - counts_r)/counts_r
+    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/total_sim * proportion_r
     END AS Pearson_summand,
 CASE WHEN counts_r = 0 THEN NULL
     WHEN counts_s = 0 THEN 0
@@ -57,4 +66,6 @@ CASE WHEN counts_r = 0 THEN NULL
 FROM proportions, pop_sizes)
 
 SELECT * FROM results
--- WHERE z_approx_valid != 1;
+-- WHERE (counts_r = 0) OR (counts_s = 0);
+-- WHERE one_sample_z_approx_valid != 1;
+-- SELECT * FROM pop_sizes
