@@ -132,7 +132,7 @@ population_sim AS ({sim_pop_query}),
 r AS ({real_totals_query}),
 s AS ({sim_totals_query}),
 all_counts AS
-(SELECT NVL(r.column_name, s.column_name) AS col_name, NVL(r.val, s.val) AS val,
+(SELECT NVL(r.column_name, s.column_name) AS col_name, NVL(NVL(r.val, s.val), 'None') AS val,
 NVL(counts_real, 0) AS counts_r, NVL(counts_sim, 0) AS counts_s
 FROM r FULL OUTER JOIN s
 ON (r.column_name = s.column_name AND (r.val = s.val OR (r.val IS NULL AND s.val IS NULL)))

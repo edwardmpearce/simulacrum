@@ -21,7 +21,7 @@ s AS
 all_counts AS
 (SELECT
 NVL(r.column_name, s.column_name) AS col_name,
-NVL(r.val, s.val) AS val,
+NVL(NVL(r.val, s.val), 'None') AS val,
 NVL(counts_real, 0) AS counts_r,
 NVL(counts_sim, 0) AS counts_s
 FROM
