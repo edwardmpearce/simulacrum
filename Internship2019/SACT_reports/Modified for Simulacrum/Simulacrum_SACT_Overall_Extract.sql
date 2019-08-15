@@ -1,24 +1,35 @@
-/* Originally written by Bukky Juwa - 17th Jan 2019, based on work by Carrie - 25th June 2018, and ADAM BROWN - 17TH JANUARY 2019 */
-/* Modified for use on simulated SACT datasets in the Simulacrum by Edward Pearce - 12th August 2019 */
+/* Written by Edward Pearce - 15th August 2019 */
+/* Based on work by Bukky Juwa - 17th Jan 2019, ADAM BROWN - 17TH JANUARY 2019, and Carrie - 25th June 2018 */
 
-/* This creates the non-CTYA level SAS extracts (regimen/cycle, drug, and outcome levels) from Simulacrum datasets (SACT and AV tables) */
+/* This creates the non-CTYA level SAS extracts (regimen/cycle, drug, and outcome levels) from Simulacrum datasets (simulated SACT and AV tables) */
 
-/* The code is split up into the definitions of a number of derived tables: */
-/* Firstly, the tables 'TreatmentDates' and 'Derived_Regimen_Fields' are introduced to define some intermediate variables */
-/* Secondly, the table 'SIM_SACT_AllLevels' is introduced to join the various Simulacrum data sources together and define several derived fields */
-/* Thirdly, the tables 'SIM_SACT_RegimenLevel', 'SIM_SACT_DrugLevel', and 'SIM_SACT_OutcomeLevel' are defined using subsets of fields from 'SIM_SACT_AllLevels' */
-/* Finally, the user is able to select which table they want to view with a date-range constraint at the end of the file */
+/* User Instructions */
+/* 1. Set the dates in the Extract_Dates table below - to be regularly updated when producing new extracts/snapshots of the datasets */
+/*   a) Extract_Start specifies the start of the date-range for the data to be extracted (Default to extract data for April 2018 onwards) */
+/*   b) Latest_Treatment_Check should be updated to be 3 months before the latest available SACT data. (Set at '31-12-2018' at time of writing) */
+/*      Latest_Treatment_Check is used to check whether or not the patient has received any treatment within the last 3 months */
+/*   c) Outcome_Extract_End specifies the end of the date-range for the Outcome-level extract ONLY. (Default to extract outcomes between April and November 2018) */
+/* 2. Choose which extract you want to create by uncommenting the relevant line at the end of the document */
 
-/* There are two locations in this document where hard-coded dates may need to be regularly updated when producing new extracts/snapshots of the datasets: */
-/* 1. In the definition of the 'Outcome_Expected' field in the 'SIM_SACT_AllLevels' table (under the heading 'Additional derived fields', around line 160) */
-/* Here, the date which is compared with Latest_Treatment_Date should be updated to be 3 months before the latest available SACT data, since this line checks */
-/* whether or not the patient on this regimen has received any treatment within the last 3 months (Set at '31-12-2018' at time of writing)*/
-/* 2. The dates in the WHERE clauses in the final SELECT statements at the end of the document. (Set to extract data for April 2018 onwards at time of writing) */
-/* The user may wish to update/modify these clauses to change the date-range of the data which they extract (e.g. to account for the availability of SACT data) */
+/* Code Explanation */
+/* The code is split up into four sections: */
+/* In Part One, the tables 'TreatmentDates' and 'Derived_Regimen_Fields' are introduced to define some intermediate variables */
+/* In Part Two, the table 'SIM_SACT_AllLevels' is introduced to join the various Simulacrum data sources together and define several derived fields */
+/* In Part Three, the tables 'SIM_SACT_RegimenLevel', 'SIM_SACT_DrugLevel', and 'SIM_SACT_OutcomeLevel' are defined using subsets of fields from 'SIM_SACT_AllLevels' and the user-input dates from the Extract_Dates table */
+/* In Part Four, the user is able to select which table they want to view at the end of the file */
 
 /* **************************************** Part One **************************************** */
 
 WITH
+/* Change these dates when creating a new monthly update */	
+Extract_Dates AS
+(SELECT 
+	TO_DATE('01-04-2018','DD-MM-YYYY') AS Extract_Start,
+	TO_DATE('31-12-2018','DD-MM-YYYY') AS Latest_Treatment_Check, -- Change date on each new extraction to 3 months before most recent SACT data
+	TO_DATE('30-11-2018','DD-MM-YYYY') AS Outcome_Extract_End
+FROM DUAL), 
+
+
 TreatmentDates AS
 (SELECT 
 	SIM_SACT_C.Merged_Regimen_ID,
@@ -92,6 +103,7 @@ SIM_SACT_AllLevels AS
 /*  Regimen-level fields */
     NVL(SIM_SACT_R.Merged_Regimen_ID, '') AS Merged_Regimen_ID,
 	NVL(TO_CHAR(SIM_SACT_R.Start_Date_of_Regimen, 'MON/YYYY'), '') AS Start_Date_of_Regimen,
+	NVL(SIM_SACT_R.Start_Date_of_Regimen, '') AS Start_Date_of_Regimen_Full,
 /*  The AgeGroup field defined below is based on age at regimen start date, whilst the Age field in SIM_AV_TUMOUR denotes age at diagnosis */
 /*  Therefore we add the difference in time between DiagnosisDateBest and Start_Date_of_Regimen to calculate age at regimen start date */
 	NVL(TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)), '') AS Age_at_Regimen_Start,
@@ -128,6 +140,7 @@ SIM_SACT_AllLevels AS
 /*  Cycle-level fields */	
     NVL(SIM_SACT_C.Merged_Cycle_ID, '') AS Merged_Cycle_ID,
     NVL(TO_CHAR(SIM_SACT_C.Start_Date_of_Cycle, 'MON/YYYY'), '') as Start_Date_of_Cycle,
+    NVL(SIM_SACT_C.Start_Date_of_Cycle, '') as Start_Date_of_Cycle_Full,
 /*  This field 'Perf_Status_Start_of_Cycle' has a different name to 'Perf_Stat_Start_of_Cycle_Adult' */
     NVL(SIM_SACT_C.Perf_Status_Start_of_Cycle, '') AS Perf_Status_Start_of_Cycle,
 /*  The Simulacrum currently does NOT contain the field 'Weight_at_Start_of_Cycle' */
@@ -135,7 +148,8 @@ SIM_SACT_AllLevels AS
 
 /*  Drug-level fields */	
     NVL(SIM_SACT_D.Merged_Drug_Detail_ID, '') AS Merged_Drug_Detail_ID,
-    NVL(TO_CHAR(SIM_SACT_D.Administration_Date, 'MON/YYYY'), '') as Administration_Date,	
+    NVL(TO_CHAR(SIM_SACT_D.Administration_Date, 'MON/YYYY'), '') as Administration_Date,
+    NVL(SIM_SACT_D.Administration_Date, '') as Administration_Date_Full,
 	NVL(TO_CHAR(SIM_SACT_D.Administration_Date, 'DAY'), '') as Weekday,
     NVL(SIM_SACT_D.Administration_Route, '') AS Administration_Route,
 /*  The Simulacrum currently does NOT contain the field 'Drug_Name', but does contain 'Drug_Group' */
@@ -157,7 +171,7 @@ SIM_SACT_AllLevels AS
 	CASE
 	WHEN SIM_SACT_O.Regimen_Outcome_Summary IS NOT NULL THEN '3'	
 	WHEN SIM_AV_P.NewVitalStatus = 'D' THEN '1'
-    WHEN R1.Latest_Treatment_Date < TO_DATE('31-12-2018','DD-MM-YYYY') THEN '2' -- Change date on each new extraction to 3 months before most recent SACT data
+    WHEN R1.Latest_Treatment_Date < Extract_dates.Latest_Treatment_Check THEN '2' -- Change date on each new extraction to 3 months before most recent SACT data
 	ELSE NULL END
 	AS Outcome_Expected,
 /*  Exclusions - A field primarily based on regimen-level field Mapped_Regimen, though the E5 sometimes also depends on tumour-level field Primary_Diagnosis */
@@ -203,7 +217,8 @@ LEFT JOIN ANALYSISBUKKYJUWA.BENCHMARK_ANALYSIS_LOOKUP_NEW BAL
 ON BAL.Mapped_Regimen = SIM_SACT_R.Mapped_Regimen
 /*  Used to derive regimen-level fields 'Adult_Perf_Stat_Start_of_Reg' and 'Analysis' */
 LEFT JOIN Derived_Regimen_Fields R1
-ON R1.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID),
+ON R1.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID, 
+Extract_dates),
 
 /* **************************************** Part Three **************************************** */
 
@@ -243,7 +258,9 @@ SIM_SACT_RegimenLevel AS
     Regimen_Outcome_Summary,
     Outcome_Expected,
     Exclusion
-FROM SIM_SACT_AllLevels),
+FROM SIM_SACT_AllLevels, Extract_dates
+WHERE (Start_Date_of_Regimen_Full >= Extract_Start OR Start_Date_of_Cycle_Full >= Extract_Start) 
+AND Administration_Date_Full >= Extract_Start),
 
 
 SIM_SACT_DrugLevel AS
@@ -290,7 +307,8 @@ SIM_SACT_DrugLevel AS
     Trust_of_Drug_Provider,
     Regimen_Outcome_Summary,
     Exclusion
-FROM SIM_SACT_AllLevels),
+FROM SIM_SACT_AllLevels, Extract_dates
+WHERE (Start_Date_of_Regimen_Full >= Extract_Start OR Start_Date_of_Cycle_Full >= Extract_Start OR Administration_Date_Full >= Extract_Start)),
 
 
 SIM_SACT_OutcomeLevel AS
@@ -329,22 +347,14 @@ SIM_SACT_OutcomeLevel AS
 	Regimen_Outcome_Summary,
     Outcome_Expected,
     Exclusion
-FROM SIM_SACT_AllLevels
-WHERE Outcome_Expected IS NOT NULL)
+FROM SIM_SACT_AllLevels, Extract_dates
+WHERE (Start_Date_of_Regimen_Full BETWEEN Extract_Start AND Outcome_Extract_End OR Start_Date_of_Cycle_Full BETWEEN Extract_Start AND Outcome_Extract_End)
+AND Outcome_Expected IS NOT NULL)
 
 /* **************************************** Part Four **************************************** */
 
-/* Uncomment the relevant lines of code to choose the extract you want to create/the table you want to view. */	
-/* Change these dates when creating a new monthly update */	
---SELECT *
---FROM SIM_SACT_RegimenLevel
---WHERE (Start_Date_of_Regimen >= '01-APR-18' OR Start_Date_of_Cycle >= '01-APR-18');
-
---SELECT *
---FROM SIM_SACT_DrugLevel
---WHERE (Start_Date_of_Regimen >= '01-APR-18' OR Start_Date_of_Cycle >= '01-APR-18' OR Administration_Date >= '01-APR-18');
-
---SELECT *
---FROM SIM_SACT_OutcomeLevel
---WHERE (Start_Date_of_Regimen BETWEEN '01-APR-18' AND '30-NOV-18' OR Start_Date_of_Cycle BETWEEN '01-APR-18' AND '30-NOV-18');
-
+/* Uncomment the relevant lines of code to choose the extract you want to create/the table you want to view. */
+SELECT *
+--FROM SIM_SACT_RegimenLevel;
+--FROM SIM_SACT_DrugLevel;
+--FROM SIM_SACT_OutcomeLevel;
