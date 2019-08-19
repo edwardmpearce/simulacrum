@@ -7,7 +7,10 @@ This file can be imported as a module and contains the following functions:
     * make_AV2017_pop_query - returns an SQL query to construct a table of tumour data from the AV2017 snapshot    
     * make_totals_query - returns an SQL query to get counts of values in a list of columns
     * all_counts_query - returns an SQL query to get linked value counts from a list of columns in a pair of datasets.
+    * compute_stats_query - returns an SQL query to compute statistics based on value counts from a pair of datasets.
+    * chi2_query - returns an SQL query to compute chi-squared statistics between fields in a pair of datasets.
 """
+
 
 __author__ = 'Edward Pearce'
 __copyright__ = 'Copyright 2019, Simulacrum Test Suite'
@@ -125,7 +128,7 @@ def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=T
     """    
     # Set the default list of (non-index) column names present in the Simulacrum tumour table if no alternative list is given
     if col_names is None:
-        col_names = ['GRADE', 'AGE', 'SEX', 'CREG_CODE', 'SCREENINGSTATUSFULL_CODE', 'ER_STATUS', 'ER_SCORE', 'PR_STATUS', 'PR_SCORE', 'HER2_STATUS', 'CANCERCAREPLANINTENT', 'PERFORMANCESTATUS', 'CNS', 'ACE27', 'GLEASON_PRIMARY', 'GLEASON_SECONDARY', 'GLEASON_TERTIARY', 'GLEASON_COMBINED', 'DATE_FIRST_SURGERY', 'LATERALITY', 'QUINTILE_2015', 'DIAGNOSISDATEBEST', 'SITE_ICD10_O2', 'SITE_ICD10_O2_3CHAR', 'MORPH_ICD10_O2', 'BEHAVIOUR_ICD10_O2', 'T_BEST', 'N_BEST', 'M_BEST', 'STAGE_BEST', 'STAGE_BEST_SYSTEM']
+        from params import col_names
 
     sql_combined_totals = '''WITH population_real AS ({real_pop_query}),
 population_sim AS ({sim_pop_query}),
@@ -146,3 +149,65 @@ OR (r.column_name = 'QUINTILE_2015' AND s.column_name = 'QUINTILE_2015' AND SUBS
     if standalone:
         sql_combined_totals += "SELECT * FROM all_counts"
     return sql_combined_totals
+
+
+def compute_stats_query(sim_pop_query, real_pop_query, standalone=True):
+    r"""Returns SQL query to compute statistics based on value counts from a pair of datasets.
+    
+    Composes an SQL query to obtain value counts, compute test statistics for the passed list of columns within the passed tables (defined by query),
+    joined along matching column names and values. 
+    
+    Parameters
+    ----------
+    sim_pop_query : str
+        The SQL Select statement for the table of simulated tumour data
+    real_pop_query : str
+        The SQL Select statement for the table of real tumour data
+    standalone : Boolean, defaults to True
+        Set to False to omit the final SELECT statement, so that further subqueries may be appended.
+    
+    Returns
+    -------
+    str
+        An SQL query prepped for input into pd.read_sql_query
+    
+    """    
+    analysis_subquery = '''pop_sizes AS (SELECT * FROM 
+(SELECT COUNT(*) AS total_real FROM population_real), 
+(SELECT COUNT(*) AS total_sim FROM population_sim)),
+proportions AS
+(SELECT col_name, val, counts_r, counts_s,
+counts_r/total_real AS proportion_r,
+counts_s/total_sim AS proportion_s,
+counts_s/total_sim - counts_r/total_real AS abs_diff,
+CASE WHEN counts_r = 0 THEN NULL
+    ELSE (counts_s * total_real)/(counts_r * total_sim) - 1
+    END AS rel_diff,
+(counts_r + counts_s)/(total_real + total_sim) AS average
+FROM all_counts, pop_sizes),
+results AS
+(SELECT col_name, val, counts_r, counts_s, proportion_r, proportion_s, abs_diff, rel_diff, average,
+CASE WHEN proportion_r = 0 THEN NULL
+    ELSE (counts_s - total_sim * proportion_r)/SQRT(total_sim * proportion_r * (1 - proportion_r))
+    END AS binom_z_test_one_sample,
+CASE WHEN proportion_r = 0 THEN NULL
+    WHEN (total_sim > 9 * (1 - proportion_r)/proportion_r AND total_sim > 9 * proportion_r / (1 - proportion_r)) THEN 1
+    ELSE 0
+    END AS one_sample_z_approx_valid,
+abs_diff/SQRT(average * (1 - average) * ((total_real + total_sim)/(total_real * total_sim))) 
+AS z_test_two_sample_pooled,
+CASE WHEN counts_r = 0 THEN NULL
+    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/total_sim * proportion_r
+    END AS Pearson_summand,
+CASE WHEN counts_r = 0 THEN NULL
+    WHEN counts_s = 0 THEN 0
+    ELSE counts_s * LOG(EXP(1), proportion_s/proportion_r)
+    END AS LR_summand
+FROM proportions, pop_sizes)
+'''.replace('\n', ' ')
+        
+    if standalone:
+        analysis_subquery += "SELECT * FROM results"
+
+    complete_query = all_counts_query(sim_pop_query, real_pop_query, standalone=False) + ',' + analysis_subquery
+    return complete_query
