@@ -56,16 +56,23 @@ CASE WHEN proportion_r = 0 THEN NULL
     END AS one_sample_z_approx_valid,
 abs_diff/SQRT(average * (1 - average) * ((total_real + total_sim)/(total_real * total_sim))) 
 AS z_test_two_sample_pooled,
-CASE WHEN counts_r = 0 THEN NULL
+CASE WHEN counts_r = 0 THEN 2*counts_s*counts_s
     ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/total_sim * proportion_r
     END AS Pearson_summand,
-CASE WHEN counts_r = 0 THEN NULL
-    WHEN counts_s = 0 THEN 0
+CASE WHEN counts_s = 0 THEN 0
+    WHEN counts_r = 0 THEN counts_s * LOG(EXP(1), 2 * counts_s)
     ELSE counts_s * LOG(EXP(1), proportion_s/proportion_r)
     END AS LR_summand
-FROM proportions, pop_sizes)
+FROM proportions, pop_sizes), 
 
-SELECT * FROM results
--- WHERE (counts_r = 0) OR (counts_s = 0);
--- WHERE one_sample_z_approx_valid != 1;
--- SELECT * FROM pop_sizes
+chi_squared_tests AS
+(SELECT 
+col_name AS Field, 
+COUNT(*) AS num_cats, 
+SUM(Pearson_summand) AS Pearson_Test, 
+2 * SUM(LR_summand) AS Likelihood_ratio_test,
+COUNT(*) - 1 AS degrees_of_freedom 
+FROM results
+GROUP BY col_name)
+
+SELECT * FROM chi_squared_tests
