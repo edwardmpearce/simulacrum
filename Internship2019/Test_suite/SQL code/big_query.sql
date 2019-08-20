@@ -57,7 +57,7 @@ CASE WHEN proportion_r = 0 THEN NULL
 abs_diff/SQRT(average * (1 - average) * ((total_real + total_sim)/(total_real * total_sim))) 
 AS z_test_two_sample_pooled,
 CASE WHEN counts_r = 0 THEN 2*counts_s*counts_s
-    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/total_sim * proportion_r
+    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/(total_sim * proportion_r)
     END AS Pearson_summand,
 CASE WHEN counts_s = 0 THEN 0
     WHEN counts_r = 0 THEN counts_s * LOG(EXP(1), 2 * counts_s)
