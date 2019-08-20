@@ -4,11 +4,13 @@
 """
 This file can be imported as a module and contains the following functions:
     * get_cols_query - returns an SQL query to get the column names of a table in a database
-    * make_AV2017_pop_query - returns an SQL query to construct a table of tumour data from the AV2017 snapshot    
     * make_totals_query - returns an SQL query to get counts of values in a list of columns
     * all_counts_query - returns an SQL query to get linked value counts from a list of columns in a pair of datasets.
     * compute_stats_query - returns an SQL query to compute statistics based on value counts from a pair of datasets.
     * chi2_query - returns an SQL query to compute chi-squared statistics between fields in a pair of datasets.
+This file also contains the following module parameters:
+    * AV2015_pop_query - A string containing an SQL query to construct a table of tumour data from the AV2015 snapshot  
+    * AV2017_pop_query - A string containing an SQL query to construct a table of tumour data from the AV2017 snapshot  
 """
 
 
@@ -28,58 +30,6 @@ def get_cols_query(owner, table, condition=""):
     if condition != "":
         query = query + "AND {}".format(condition)
     return query
-
-
-def make_AV2015_pop_query():
-    r"""Returns SQL query to build a table of tumour data drawn from the AV2015 snapshot ready for comparison with
-        its counterpart in the Simulacrum."""
-    
-    av_tumour_cols = 'TUMOURID, LSOA11_CODE, GRADE, AGE, SEX, CREG_CODE, SCREENINGSTATUSFULL_CODE, ER_STATUS, ER_SCORE, PR_STATUS, PR_SCORE, HER2_STATUS, LATERALITY, DIAGNOSISDATEBEST, SITE_ICD10_O2, SITE_ICD10_O2_3CHAR, MORPH_ICD10_O2, BEHAVIOUR_ICD10_O2, T_BEST, N_BEST, M_BEST, STAGE_BEST, STAGE_BEST_SYSTEM'
-
-    av_tumour_exp_cols = 'TUMOURID, CANCERCAREPLANINTENT, PERFORMANCESTATUS, CNS, ACE27, DATE_FIRST_SURGERY, GLEASON_PRIMARY, GLEASON_SECONDARY, GLEASON_TERTIARY, GLEASON_COMBINED'
-
-    all_cols_joined = 'multi_depr_index.QUINTILE_2015, av_tumour.GRADE, av_tumour.AGE, av_tumour.SEX, av_tumour.CREG_CODE, av_tumour.SCREENINGSTATUSFULL_CODE, av_tumour.ER_STATUS, av_tumour.ER_SCORE, av_tumour.PR_STATUS, av_tumour.PR_SCORE, av_tumour.HER2_STATUS, av_tumour.LATERALITY, av_tumour.DIAGNOSISDATEBEST, av_tumour.SITE_ICD10_O2, av_tumour.SITE_ICD10_O2_3CHAR, av_tumour.MORPH_ICD10_O2, av_tumour.BEHAVIOUR_ICD10_O2, av_tumour.T_BEST, av_tumour.N_BEST, av_tumour.M_BEST, av_tumour.STAGE_BEST, av_tumour.STAGE_BEST_SYSTEM, av_tumour_exp.CANCERCAREPLANINTENT, av_tumour_exp.PERFORMANCESTATUS, av_tumour_exp.CNS, av_tumour_exp.ACE27, av_tumour_exp.DATE_FIRST_SURGERY, av_tumour_exp.GLEASON_PRIMARY, av_tumour_exp.GLEASON_SECONDARY, av_tumour_exp.GLEASON_TERTIARY, av_tumour_exp.GLEASON_COMBINED'
-    
-    AV2015_pop_query = '''SELECT {all_cols_joined} FROM
-(SELECT {av_tumour_cols} FROM AV2015.AV_TUMOUR WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2015') 
-AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) av_tumour
-LEFT JOIN 
-(SELECT {av_tumour_exp_cols} 
-FROM AV2015.AV_TUMOUR_EXPERIMENTAL_1612) av_tumour_exp
-ON av_tumour.tumourid = av_tumour_exp.tumourid
-LEFT JOIN IMD.ID2015 multi_depr_index
-ON av_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
-'''.replace('\n', ' ').format(all_cols_joined=all_cols_joined, 
-                              av_tumour_cols=av_tumour_cols, 
-                              av_tumour_exp_cols=av_tumour_exp_cols)
-    
-    return AV2015_pop_query
-
-
-def make_AV2017_pop_query():
-    r"""Returns SQL query to build a table of tumour data drawn from the AV2017 snapshot ready for comparison with
-        its counterpart in the Simulacrum."""
-    
-    at_tumour_cols = 'TUMOURID, LSOA11_CODE, GRADE, AGE, SEX, CREG_CODE, SCREENINGSTATUSFULL_CODE, ER_STATUS, ER_SCORE, PR_STATUS, PR_SCORE, HER2_STATUS, GLEASON_PRIMARY, GLEASON_SECONDARY, GLEASON_TERTIARY, GLEASON_COMBINED, LATERALITY, DIAGNOSISDATEBEST, SITE_ICD10_O2, SITE_ICD10_O2_3CHAR, MORPH_ICD10_O2, BEHAVIOUR_ICD10_O2, T_BEST, N_BEST, M_BEST, STAGE_BEST, STAGE_BEST_SYSTEM'
-
-    at_tumour_exp_cols = 'TUMOURID, CANCERCAREPLANINTENT, PERFORMANCESTATUS, CNS, ACE27, DATE_FIRST_SURGERY'
-
-    all_cols_joined = 'multi_depr_index.QUINTILE_2015, at_tumour.GRADE, at_tumour.AGE, at_tumour.SEX, at_tumour.CREG_CODE, at_tumour.SCREENINGSTATUSFULL_CODE, at_tumour.ER_STATUS, at_tumour.ER_SCORE, at_tumour.PR_STATUS, at_tumour.PR_SCORE, at_tumour.HER2_STATUS, at_tumour.GLEASON_PRIMARY, at_tumour.GLEASON_SECONDARY, at_tumour.GLEASON_TERTIARY, at_tumour.GLEASON_COMBINED, at_tumour.LATERALITY, at_tumour.DIAGNOSISDATEBEST, at_tumour.SITE_ICD10_O2, at_tumour.SITE_ICD10_O2_3CHAR, at_tumour.MORPH_ICD10_O2, at_tumour.BEHAVIOUR_ICD10_O2, at_tumour.T_BEST, at_tumour.N_BEST, at_tumour.M_BEST, at_tumour.STAGE_BEST, at_tumour.STAGE_BEST_SYSTEM, at_tumour_exp.CANCERCAREPLANINTENT, at_tumour_exp.PERFORMANCESTATUS, at_tumour_exp.CNS, at_tumour_exp.ACE27, at_tumour_exp.DATE_FIRST_SURGERY'
-    
-    AV2017_pop_query = '''SELECT {all_cols_joined} FROM
-(SELECT {at_tumour_cols} FROM AV2017.AT_TUMOUR_ENGLAND WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2017') 
-AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) at_tumour
-LEFT JOIN 
-(SELECT {at_tumour_exp_cols} 
-FROM AV2017.AT_TUMOUR_EXPERIMENTAL_ENGLAND) at_tumour_exp
-ON at_tumour.tumourid = at_tumour_exp.tumourid
-LEFT JOIN IMD.ID2015 multi_depr_index
-ON at_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
-'''.replace('\n', ' ').format(all_cols_joined=all_cols_joined, 
-                              at_tumour_cols=at_tumour_cols, 
-                              at_tumour_exp_cols=at_tumour_exp_cols)
-    
-    return AV2017_pop_query
 
 
 def make_totals_query(pop_query, col_names=None, suffix='', standalone=True):
@@ -238,3 +188,35 @@ FROM proportions, pop_sizes)
 
     complete_query = all_counts_query(sim_pop_query, real_pop_query, standalone=False) + ',' + analysis_subquery
     return complete_query
+
+
+# A string containing an SQL query to construct a table of tumour data from the AV2015 snapshot
+# ready for comparison with its counterpart in the Simulacrum
+AV2015_pop_query = '''SELECT multi_depr_index.QUINTILE_2015, av_tumour.GRADE, av_tumour.AGE, av_tumour.SEX, av_tumour.CREG_CODE, av_tumour.SCREENINGSTATUSFULL_CODE, av_tumour.ER_STATUS, av_tumour.ER_SCORE, av_tumour.PR_STATUS, av_tumour.PR_SCORE, av_tumour.HER2_STATUS, av_tumour.LATERALITY, av_tumour.DIAGNOSISDATEBEST, av_tumour.SITE_ICD10_O2, av_tumour.SITE_ICD10_O2_3CHAR, av_tumour.MORPH_ICD10_O2, av_tumour.BEHAVIOUR_ICD10_O2, av_tumour.T_BEST, av_tumour.N_BEST, av_tumour.M_BEST, av_tumour.STAGE_BEST, av_tumour.STAGE_BEST_SYSTEM, av_tumour_exp.CANCERCAREPLANINTENT, av_tumour_exp.PERFORMANCESTATUS, av_tumour_exp.CNS, av_tumour_exp.ACE27, av_tumour_exp.DATE_FIRST_SURGERY, av_tumour_exp.GLEASON_PRIMARY, av_tumour_exp.GLEASON_SECONDARY, av_tumour_exp.GLEASON_TERTIARY, av_tumour_exp.GLEASON_COMBINED
+FROM
+(SELECT TUMOURID, LSOA11_CODE, GRADE, AGE, SEX, CREG_CODE, SCREENINGSTATUSFULL_CODE, ER_STATUS, ER_SCORE, PR_STATUS, PR_SCORE, HER2_STATUS, LATERALITY, DIAGNOSISDATEBEST, SITE_ICD10_O2, SITE_ICD10_O2_3CHAR, MORPH_ICD10_O2, BEHAVIOUR_ICD10_O2, T_BEST, N_BEST, M_BEST, STAGE_BEST, STAGE_BEST_SYSTEM
+FROM AV2015.AV_TUMOUR
+WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2015') AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) av_tumour
+LEFT JOIN
+(SELECT TUMOURID, CANCERCAREPLANINTENT, PERFORMANCESTATUS, CNS, ACE27, DATE_FIRST_SURGERY, GLEASON_PRIMARY, GLEASON_SECONDARY, GLEASON_TERTIARY, GLEASON_COMBINED 
+FROM AV2015.AV_TUMOUR_EXPERIMENTAL_1612) av_tumour_exp
+ON av_tumour.tumourid = av_tumour_exp.tumourid
+LEFT JOIN IMD.ID2015 multi_depr_index
+ON av_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
+'''
+
+
+# A string containing an SQL query to construct a table of tumour data from the AV2017 snapshot 
+# ready for comparison with its counterpart in the Simulacrum
+AV2017_pop_query = '''SELECT multi_depr_index.QUINTILE_2015, at_tumour.GRADE, at_tumour.AGE, at_tumour.SEX, at_tumour.CREG_CODE, at_tumour.SCREENINGSTATUSFULL_CODE, at_tumour.ER_STATUS, at_tumour.ER_SCORE, at_tumour.PR_STATUS, at_tumour.PR_SCORE, at_tumour.HER2_STATUS, at_tumour.GLEASON_PRIMARY, at_tumour.GLEASON_SECONDARY, at_tumour.GLEASON_TERTIARY, at_tumour.GLEASON_COMBINED, at_tumour.LATERALITY, at_tumour.DIAGNOSISDATEBEST, at_tumour.SITE_ICD10_O2, at_tumour.SITE_ICD10_O2_3CHAR, at_tumour.MORPH_ICD10_O2, at_tumour.BEHAVIOUR_ICD10_O2, at_tumour.T_BEST, at_tumour.N_BEST, at_tumour.M_BEST, at_tumour.STAGE_BEST, at_tumour.STAGE_BEST_SYSTEM, at_tumour_exp.CANCERCAREPLANINTENT, at_tumour_exp.PERFORMANCESTATUS, at_tumour_exp.CNS, at_tumour_exp.ACE27, at_tumour_exp.DATE_FIRST_SURGERY 
+FROM
+(SELECT TUMOURID, LSOA11_CODE, GRADE, AGE, SEX, CREG_CODE, SCREENINGSTATUSFULL_CODE, ER_STATUS, ER_SCORE, PR_STATUS, PR_SCORE, HER2_STATUS, GLEASON_PRIMARY, GLEASON_SECONDARY, GLEASON_TERTIARY, GLEASON_COMBINED, LATERALITY, DIAGNOSISDATEBEST, SITE_ICD10_O2, SITE_ICD10_O2_3CHAR, MORPH_ICD10_O2, BEHAVIOUR_ICD10_O2, T_BEST, N_BEST, M_BEST, STAGE_BEST, STAGE_BEST_SYSTEM
+FROM AV2017.AT_TUMOUR_ENGLAND 
+WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2017') AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) at_tumour
+LEFT JOIN 
+(SELECT TUMOURID, CANCERCAREPLANINTENT, PERFORMANCESTATUS, CNS, ACE27, DATE_FIRST_SURGERY 
+FROM AV2017.AT_TUMOUR_EXPERIMENTAL_ENGLAND) at_tumour_exp
+ON at_tumour.tumourid = at_tumour_exp.tumourid
+LEFT JOIN IMD.ID2015 multi_depr_index
+ON at_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
+'''
