@@ -30,6 +30,32 @@ def get_cols_query(owner, table, condition=""):
     return query
 
 
+def make_AV2015_pop_query():
+    r"""Returns SQL query to build a table of tumour data drawn from the AV2015 snapshot ready for comparison with
+        its counterpart in the Simulacrum."""
+    
+    av_tumour_cols = 'TUMOURID, LSOA11_CODE, GRADE, AGE, SEX, CREG_CODE, SCREENINGSTATUSFULL_CODE, ER_STATUS, ER_SCORE, PR_STATUS, PR_SCORE, HER2_STATUS, LATERALITY, DIAGNOSISDATEBEST, SITE_ICD10_O2, SITE_ICD10_O2_3CHAR, MORPH_ICD10_O2, BEHAVIOUR_ICD10_O2, T_BEST, N_BEST, M_BEST, STAGE_BEST, STAGE_BEST_SYSTEM'
+
+    av_tumour_exp_cols = 'TUMOURID, CANCERCAREPLANINTENT, PERFORMANCESTATUS, CNS, ACE27, DATE_FIRST_SURGERY, GLEASON_PRIMARY, GLEASON_SECONDARY, GLEASON_TERTIARY, GLEASON_COMBINED'
+
+    all_cols_joined = 'multi_depr_index.QUINTILE_2015, av_tumour.GRADE, av_tumour.AGE, av_tumour.SEX, av_tumour.CREG_CODE, av_tumour.SCREENINGSTATUSFULL_CODE, av_tumour.ER_STATUS, av_tumour.ER_SCORE, av_tumour.PR_STATUS, av_tumour.PR_SCORE, av_tumour.HER2_STATUS, av_tumour.LATERALITY, av_tumour.DIAGNOSISDATEBEST, av_tumour.SITE_ICD10_O2, av_tumour.SITE_ICD10_O2_3CHAR, av_tumour.MORPH_ICD10_O2, av_tumour.BEHAVIOUR_ICD10_O2, av_tumour.T_BEST, av_tumour.N_BEST, av_tumour.M_BEST, av_tumour.STAGE_BEST, av_tumour.STAGE_BEST_SYSTEM, av_tumour_exp.CANCERCAREPLANINTENT, av_tumour_exp.PERFORMANCESTATUS, av_tumour_exp.CNS, av_tumour_exp.ACE27, av_tumour_exp.DATE_FIRST_SURGERY, av_tumour_exp.GLEASON_PRIMARY, av_tumour_exp.GLEASON_SECONDARY, av_tumour_exp.GLEASON_TERTIARY, av_tumour_exp.GLEASON_COMBINED'
+    
+    AV2015_pop_query = '''SELECT {all_cols_joined} FROM
+(SELECT {av_tumour_cols} FROM AV2015.AV_TUMOUR WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2015') 
+AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) av_tumour
+LEFT JOIN 
+(SELECT {av_tumour_exp_cols} 
+FROM AV2015.AV_TUMOUR_EXPERIMENTAL_1612) av_tumour_exp
+ON av_tumour.tumourid = av_tumour_exp.tumourid
+LEFT JOIN IMD.ID2015 multi_depr_index
+ON av_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
+'''.replace('\n', ' ').format(all_cols_joined=all_cols_joined, 
+                              av_tumour_cols=av_tumour_cols, 
+                              av_tumour_exp_cols=av_tumour_exp_cols)
+    
+    return AV2015_pop_query
+
+
 def make_AV2017_pop_query():
     r"""Returns SQL query to build a table of tumour data drawn from the AV2017 snapshot ready for comparison with
         its counterpart in the Simulacrum."""
@@ -41,7 +67,7 @@ def make_AV2017_pop_query():
     all_cols_joined = 'multi_depr_index.QUINTILE_2015, at_tumour.GRADE, at_tumour.AGE, at_tumour.SEX, at_tumour.CREG_CODE, at_tumour.SCREENINGSTATUSFULL_CODE, at_tumour.ER_STATUS, at_tumour.ER_SCORE, at_tumour.PR_STATUS, at_tumour.PR_SCORE, at_tumour.HER2_STATUS, at_tumour.GLEASON_PRIMARY, at_tumour.GLEASON_SECONDARY, at_tumour.GLEASON_TERTIARY, at_tumour.GLEASON_COMBINED, at_tumour.LATERALITY, at_tumour.DIAGNOSISDATEBEST, at_tumour.SITE_ICD10_O2, at_tumour.SITE_ICD10_O2_3CHAR, at_tumour.MORPH_ICD10_O2, at_tumour.BEHAVIOUR_ICD10_O2, at_tumour.T_BEST, at_tumour.N_BEST, at_tumour.M_BEST, at_tumour.STAGE_BEST, at_tumour.STAGE_BEST_SYSTEM, at_tumour_exp.CANCERCAREPLANINTENT, at_tumour_exp.PERFORMANCESTATUS, at_tumour_exp.CNS, at_tumour_exp.ACE27, at_tumour_exp.DATE_FIRST_SURGERY'
     
     AV2017_pop_query = '''SELECT {all_cols_joined} FROM
-(SELECT {at_tumour_cols} FROM AV2017.AT_TUMOUR_ENGLAND WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2015') 
+(SELECT {at_tumour_cols} FROM AV2017.AT_TUMOUR_ENGLAND WHERE (diagnosisdatebest BETWEEN '01-JAN-2013' AND '31-DEC-2017') 
 AND STATUSOFREGISTRATION = 'F' AND CTRY_CODE = 'E' AND DEDUP_FLAG = 1) at_tumour
 LEFT JOIN 
 (SELECT {at_tumour_exp_cols} 
@@ -56,7 +82,7 @@ ON at_tumour.LSOA11_CODE = multi_depr_index.LSOA11_CODE
     return AV2017_pop_query
 
 
-def make_totals_query(pop_query, col_names, suffix='', standalone=True):
+def make_totals_query(pop_query, col_names=None, suffix='', standalone=True):
     r"""Compose a large SQL query to obtain counts of values in a list of columns.
     
     Concatenates subqueries which obtain value counts for the passed columns within the passed table (defined by query).
@@ -66,7 +92,7 @@ def make_totals_query(pop_query, col_names, suffix='', standalone=True):
     pop_query : str
         The SQL Select statement to obtain the table for which we want to find aggregate information
     col_names : list
-        The list of table columns for which we compute value counts
+        The list of table columns for which we compute value counts. Defaults to those found in SIM_AV_TUMOUR.
     suffix : str, optional
         A suffix added to the 'counts' column name in the final output
     standalone : Boolean, defaults to True
@@ -92,6 +118,10 @@ UNION ALL
     # Here we initiliaze our long string of SQL code
     sql_get_totals = '' if not standalone else 'WITH population_{suffix} AS ({pop_query}) '.format(
         suffix=suffix, pop_query=pop_query)
+
+    # Set the default list of (non-index) column names present in the Simulacrum tumour table if no alternative list is given
+    if col_names is None:
+        from params import col_names
 
     # For each column in our list, we add a copy of the subquery template to our long string with the column name filled in
     for col_name in col_names:
@@ -126,9 +156,6 @@ def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=T
         An SQL query prepped for input into pd.read_sql_query
     
     """    
-    # Set the default list of (non-index) column names present in the Simulacrum tumour table if no alternative list is given
-    if col_names is None:
-        from params import col_names
 
     sql_combined_totals = '''WITH population_real AS ({real_pop_query}),
 population_sim AS ({sim_pop_query}),
@@ -196,11 +223,11 @@ CASE WHEN proportion_r = 0 THEN NULL
     END AS one_sample_z_approx_valid,
 abs_diff/SQRT(average * (1 - average) * ((total_real + total_sim)/(total_real * total_sim))) 
 AS z_test_two_sample_pooled,
-CASE WHEN counts_r = 0 THEN NULL
-    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/total_sim * proportion_r
+CASE WHEN counts_r = 0 THEN 2*counts_s*counts_s
+    ELSE (counts_s - total_sim * proportion_r)*(counts_s - total_sim * proportion_r)/(total_sim * proportion_r)
     END AS Pearson_summand,
-CASE WHEN counts_r = 0 THEN NULL
-    WHEN counts_s = 0 THEN 0
+CASE WHEN counts_s = 0 THEN 0
+    WHEN counts_r = 0 THEN counts_s * LOG(EXP(1), 2 * counts_s)
     ELSE counts_s * LOG(EXP(1), proportion_s/proportion_r)
     END AS LR_summand
 FROM proportions, pop_sizes)
