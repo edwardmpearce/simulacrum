@@ -32,7 +32,7 @@ def get_cols_query(owner, table, condition=""):
     return query
 
 
-def make_totals_query(pop_query, col_names=None, suffix='', standalone=True):
+def make_totals_query(pop_query, suffix='', col_names=None, standalone=True):
     r"""Compose a large SQL query to obtain counts of values in a list of columns.
     
     Concatenates subqueries which obtain value counts for the passed columns within the passed table (defined by query).
@@ -58,7 +58,7 @@ def make_totals_query(pop_query, col_names=None, suffix='', standalone=True):
     # along with a 'UNION ALL' statement to join the smaller tables together
     sql_grouped_count_template = '''SELECT
 '{col_name}' AS column_name,
-TO_CHAR({col_name}) AS val,
+NVL(TO_CHAR({col_name}), 'None') AS val,
 COUNT(*) AS counts_{suffix}
 FROM population_{suffix}
 GROUP BY {col_name}
