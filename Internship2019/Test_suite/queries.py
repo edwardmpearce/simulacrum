@@ -80,6 +80,55 @@ UNION ALL
     # We truncate the last few characters of the string to remove the final 'UNION ALL' statement
     sql_get_totals = sql_get_totals.rstrip('UNION ALL')
     return sql_get_totals
+   
+   
+def make_bivariate_totals_query(pop_query, suffix='', standalone=True):
+    r"""Compose a very large SQL query to obtain counts of value pairs over pairs of fields in a table.
+    
+    Concatenates subqueries which obtain counts of value pairs for distinct pairs of columns within the passed table (defined by query).
+    
+    Parameters
+    ----------
+    pop_query : str
+        The SQL Select statement to obtain the table for which we want to find aggregate information
+    suffix : str, optional
+        A suffix added to the 'counts' column name in the final output
+    standalone : Boolean, defaults to True
+        Set to False if the output will be a subquery, in order to avoid nested WITH statements.
+    
+    Returns
+    -------
+    str
+        An SQL query prepped for input into pd.read_sql_query
+    
+    """
+    # This is the template for the subquery obtaining group counts, 
+    # along with a 'UNION ALL' statement to join the smaller tables together
+    template = '''SELECT
+'{col_name1}' AS column_name1,
+'{col_name2}' AS column_name2,
+NVL(TO_CHAR({col_name1}), 'None') AS val1,
+NVL(TO_CHAR({col_name2}), 'None') AS val2,
+COUNT(*) AS paired_counts_{suffix}
+FROM population_{suffix}
+GROUP BY {col_name1}, {col_name2}
+UNION ALL
+'''.replace('{suffix}', suffix)
+
+    # Here we initiliaze our long string of SQL code
+    sql = '' if not standalone else 'WITH population_{suffix} AS ({pop_query}) '.format(suffix=suffix, pop_query=pop_query)
+
+   # Set the default list of (non-index) column names present in the Simulacrum tumour table, construct a list of distinct pairs
+    from params import col_names
+    pairs = [(col_names[i], col_names[j]) for i in range(len(col_names)) for j in range(i+1, len(col_names))]
+
+    # For each distinct pair of columns in our list, we add a copy of the subquery template to our long string with the column names filled in
+    for pair in pairs:
+        sql += template.format(col_name1=pair[0], col_name2=pair[1])
+    
+    # We truncate the last few characters of the string to remove the final 'UNION ALL' statement
+    sql = sql.rstrip('UNION ALL')
+    return sql
 
 
 def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=True):
