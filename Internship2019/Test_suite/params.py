@@ -5,6 +5,7 @@
 This file contains the following module parameters:
     * params - Connection parameters for the database.connect function
     * col_names - A list of the non-index columns present in SIM_AV_TUMOUR in the Simulacrum. These are the options for the col_name function parameter.
+    * col_name_pairs - List of pairs of non-index columns present in SIM_AV_TUMOUR in the Simulacrum.
     * plot_params_dict - A dictionary of plotting parameters used by the plots.plot_by_category function. The keys are plot_type options and the values are dictionaries of plotting parameters.
 """
 
@@ -17,10 +18,12 @@ params = dict(dialect='oracle',
 
 
 # Hard-coded list of non-index columns present in SIM_AV_TUMOUR in the Simulacrum. These are the options for the col_name function parameter.
-col_names = ['GRADE', 'AGE', 'SEX', 'CREG_CODE', 'SCREENINGSTATUSFULL_CODE', 'ER_STATUS', 'ER_SCORE', 'PR_STATUS', 'PR_SCORE', 'HER2_STATUS', 
-             'CANCERCAREPLANINTENT', 'PERFORMANCESTATUS', 'CNS', 'ACE27', 'GLEASON_PRIMARY', 'GLEASON_SECONDARY', 'GLEASON_TERTIARY', 'GLEASON_COMBINED', 
-             'DATE_FIRST_SURGERY', 'LATERALITY', 'QUINTILE_2015', 'DIAGNOSISDATEBEST', 'SITE_ICD10_O2', 'SITE_ICD10_O2_3CHAR', 'MORPH_ICD10_O2', 
-             'BEHAVIOUR_ICD10_O2', 'T_BEST', 'N_BEST', 'M_BEST', 'STAGE_BEST', 'STAGE_BEST_SYSTEM']
+col_names = ['GRADE', 'AGE', 'SEX', 'CREG_CODE', 'SCREENINGSTATUSFULL_CODE', 'ER_STATUS', 'ER_SCORE', 'PR_STATUS', 'PR_SCORE', 'HER2_STATUS', 'CANCERCAREPLANINTENT', 'PERFORMANCESTATUS', 'CNS', 'ACE27', 'GLEASON_PRIMARY', 'GLEASON_SECONDARY', 'GLEASON_TERTIARY', 'GLEASON_COMBINED', 'DATE_FIRST_SURGERY', 'LATERALITY', 'QUINTILE_2015', 'DIAGNOSISDATEBEST', 'SITE_ICD10_O2', 'SITE_ICD10_O2_3CHAR', 'MORPH_ICD10_O2', 'BEHAVIOUR_ICD10_O2', 'T_BEST', 'N_BEST', 'M_BEST', 'STAGE_BEST', 'STAGE_BEST_SYSTEM']
+
+
+# List of pairs of non-index columns present in SIM_AV_TUMOUR in the Simulacrum.
+col_name_pairs = [(col_names[i], col_names[j]) for i in range(len(col_names)) for j in range(i+1, len(col_names))]
+
 
 # Hard-coded dictionary of plotting parameters used by the plot_by_category function. 
 # The keys are plot_type options and the values are dictionaries of plotting parameters.
