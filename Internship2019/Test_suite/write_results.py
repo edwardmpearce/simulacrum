@@ -89,3 +89,42 @@ def write_counts_to_csv(pop_query, db, suffix, filepath, num_variates=1):
     sorted_output.to_csv(filepath, index=False)
     print('Saved! Function complete!')
     return True
+
+
+def categorical_separator(chunked_dfs):
+    r"""Separate counts grouped by either 'DIAGNOSISDATEBEST' or 'DATE_FIRST_SURGERY' into a frame separate from the rest"""
+    date_rows = []
+    categorical_rows = []
+    length_check = 0
+    for frame in chunked_dfs:
+        length_check += frame.shape[0]
+        date_rows.append(frame.loc[frame[['column_name1', 'column_name2']].isin(['DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY']).any(axis=1)])
+        categorical_rows.append(frame.loc[~frame[['column_name1', 'column_name2']].isin(['DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY']).any(axis=1)])
+    
+    date_frame = pd.concat(date_rows)
+    categorical_frame = pd.concat(categorical_rows)
+    print('Date rows ({}) + Categorical rows ({}) = total rows ({})? {}'.format(
+        date_frame.shape[0], categorical_frame.shape[0], length_check, date_frame.shape[0]+categorical_frame.shape[0]==length_check))
+    return date_frame, categorical_frame
+
+
+def dates_separator(chunked_dfs):
+    r"""Separate counts grouped by either 'DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY', or both, into 3 frames"""
+    double_date_rows = []
+    diagnosis_date_rows = []
+    surgery_date_rows = []
+    length_check = 0
+    for frame in chunked_dfs:
+        length_check += frame.shape[0]
+        double_date_rows.append(frame.loc[frame[['column_name1', 'column_name2']].isin(['DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY']).all(axis=1)])
+        diagnosis_date_rows.append(frame.loc[frame[['column_name1', 'column_name2']].isin(['DIAGNOSISDATEBEST']).any(axis=1) & 
+                                             (~frame[['column_name1', 'column_name2']].isin(['DATE_FIRST_SURGERY']).any(axis=1))])
+        surgery_date_rows.append(frame.loc[frame[['column_name1', 'column_name2']].isin(['DATE_FIRST_SURGERY']).any(axis=1) & 
+                                             (~frame[['column_name1', 'column_name2']].isin(['DIAGNOSISDATEBEST']).any(axis=1))])
+    double_date_frame = pd.concat(double_date_rows)
+    diagnosis_date_frame = pd.concat(diagnosis_date_rows)
+    surgery_date_frame = pd.concat(surgery_date_rows)
+    print('{} double date rows + {} diagnosis date rows + {} surgery date rows = {} total rows? {}'.format(
+        double_date_frame.shape[0], diagnosis_date_frame.shape[0], surgery_date_frame.shape[0], length_check, 
+        sum([double_date_frame.shape[0], diagnosis_date_frame.shape[0], surgery_date_frame.shape[0]])==length_check))
+    return double_date_frame, diagnosis_date_frame, surgery_date_frame
