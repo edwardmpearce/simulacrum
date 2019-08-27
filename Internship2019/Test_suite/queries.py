@@ -106,7 +106,7 @@ UNION ALL
     return sql
 
 
-def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=True):
+def all_counts_query(sim_pop_query, real_pop_query, standalone=True):
     r"""Returns SQL query to get linked value counts from a list of columns in a pair of datasets.
     
     Composes an SQL query to obtain value counts for the passed list of columns within the passed tables (defined by query),
@@ -119,8 +119,6 @@ def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=T
         The SQL Select statement for the table of simulated tumour data
     real_pop_query : str
         The SQL Select statement for the table of real tumour data
-    col_names : list
-        The list of table columns for which we compute value counts. Defaults to those found in SIM_AV_TUMOUR.
     standalone : Boolean, defaults to True
         Set to False to omit the final SELECT statement, so that further subqueries may be appended.
     
@@ -130,7 +128,6 @@ def all_counts_query(sim_pop_query, real_pop_query, col_names=None, standalone=T
         An SQL query prepped for input into pd.read_sql_query
     
     """    
-
     sql_combined_totals = '''WITH population_real AS ({real_pop_query}),
 population_sim AS ({sim_pop_query}),
 r AS ({real_totals_query}),
@@ -144,8 +141,8 @@ OR (r.column_name = 'CREG_CODE' AND s.column_name = 'CREG_CODE' AND SUBSTR(r.val
 OR (r.column_name = 'QUINTILE_2015' AND s.column_name = 'QUINTILE_2015' AND SUBSTR(r.val, 1, 1) = SUBSTR(s.val, 1, 1)))
 '''.replace('\n', ' ').format(real_pop_query=real_pop_query, 
                               sim_pop_query=sim_pop_query,
-                              real_totals_query=make_totals_query(real_pop_query, col_names, 'real', standalone=False),
-                              sim_totals_query=make_totals_query(sim_pop_query, col_names, 'sim', standalone=False))
+                              real_totals_query=make_totals_query(real_pop_query, 'real', standalone=False),
+                              sim_totals_query=make_totals_query(sim_pop_query, 'sim', standalone=False))
     
     if standalone:
         sql_combined_totals += "SELECT * FROM all_counts"
