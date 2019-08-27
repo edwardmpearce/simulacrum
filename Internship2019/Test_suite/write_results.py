@@ -128,3 +128,17 @@ def dates_separator(chunked_dfs):
         double_date_frame.shape[0], diagnosis_date_frame.shape[0], surgery_date_frame.shape[0], length_check, 
         sum([double_date_frame.shape[0], diagnosis_date_frame.shape[0], surgery_date_frame.shape[0]])==length_check))
     return double_date_frame, diagnosis_date_frame, surgery_date_frame
+
+
+def reorder_columns(table, to_front='DIAGNOSISDATEBEST', suffix=''):
+    r"""Moves rows with column_name value equal to the passed `to_front` argument into the `column_name1` column."""
+    no_swap = table.loc[table.column_name1 == to_front]
+    to_swap = table.loc[table.column_name2 == to_front]
+    # Change column names
+    to_swap.columns = ['column_name2', 'column_name1', 'val2_clean', 'val1_clean', 'paired_counts_' + suffix]
+    reordered = pd.concat([to_swap, no_swap], sort=True)
+    print('Shape check succussful? {} = {}? {}'.format(reordered.shape, table.shape, reordered.shape == table.shape))
+    print(to_front, 'moved to column_name1?', (reordered.column_name1 == to_front).all())
+    sorted_output = pd.concat([reordered.loc[reordered.column_name2 == col_name].sort_values(by=['val2_clean', 'val1_clean']) for col_name in col_names])
+    sorted_output = sorted_output[['column_name1', 'column_name2', 'val1_clean', 'val2_clean', 'paired_counts_' + suffix]]
+    return sorted_output
