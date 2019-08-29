@@ -32,7 +32,7 @@ def get_cols_query(owner, table, condition=""):
     return query
 
 
-def make_totals_query(pop_query, suffix='', num_variates=1, standalone=True):
+def make_totals_query(pop_query, suffix='', field_list=None, num_variates=1, standalone=True):
     r"""If `num_variates` == 1: Compose a large SQL query to obtain counts of values in a list of columns.
     Concatenates subqueries which obtain value counts for the passed columns within the passed table (defined by query).
     
@@ -74,7 +74,7 @@ UNION ALL
 '{col_name2}' AS column_name2,
 NVL(TO_CHAR({col_name1}), 'None') AS val1,
 NVL(TO_CHAR({col_name2}), 'None') AS val2,
-COUNT(*) AS paired_counts_{suffix}
+COUNT(*) AS counts_{suffix}
 FROM population_{suffix}
 GROUP BY {col_name1}, {col_name2}
 UNION ALL
@@ -89,13 +89,15 @@ UNION ALL
     if num_variates == 1:
         # Load the list of (non-index) column names present in the Simulacrum tumour table
         # For each column in our list, we add a copy of the subquery template to our long string with the column name filled in
-        for col_name in col_names:
+        iterator = field_list if field_list is not None else col_names
+        for col_name in iterator:
             sql += template.format(col_name=col_name)
-    
+
     elif num_variates == 2:
         # Load the list of distinct pairs of (non-index) column names present in the Simulacrum tumour table
         # For each pair of columns in our list, we add a copy of the subquery template to our long string with the column names filled in
-        for pair in col_name_pairs:
+        iterator = field_list if field_list is not None else col_name_pairs
+        for pair in iterator:
             sql += template.format(col_name1=pair[0], col_name2=pair[1])
     
     # We truncate the last few characters of the string to remove the final 'UNION ALL' statement
