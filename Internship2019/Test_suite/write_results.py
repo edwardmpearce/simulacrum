@@ -28,13 +28,7 @@ def clean_values(row, suffix=''):
     r"""Cleans category names for easier comparison between tables, plotting."""
     column_id = 'column_name' + suffix
     value_id = 'val' + suffix
-    if row[column_id] == 'CREG_CODE':
-        # Strip the first character of Cancer Registry Code
-        return row[value_id][1:]
-    elif row[column_id] == 'QUINTILE_2015':
-        # Strip extra text, retaining only Deprivation Index score (integer between 1 and 5 inclusive)
-        return int(row[value_id][0])
-    elif row[column_id] == 'AGE':
+    if row[column_id] == 'AGE':
         # Cast Age to integer for sorting, plotting
         return int(row[value_id])
     elif row[column_id] in ['DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY']:
@@ -142,3 +136,25 @@ def reorder_columns(table, to_front='DIAGNOSISDATEBEST', suffix=''):
     sorted_output = pd.concat([reordered.loc[reordered.column_name2 == col_name].sort_values(by=['val2_clean', 'val1_clean']) for col_name in col_names])
     sorted_output = sorted_output[['column_name1', 'column_name2', 'val1_clean', 'val2_clean', 'paired_counts_' + suffix]]
     return sorted_output
+
+
+def write_univariate_categorical_counts_to_csv():
+    for key, pop_query in pop_queries.items()
+        frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, field_list=categorical_cols), db)
+        frame['column_name'] = frame['column_name'].astype('category')
+        frame['counts_'+key] = frame['counts_'+key].astype('uint32')
+        frame['val'] = frame.apply(lambda row: int(row['val']) if row['column_name'] == 'AGE' else row['val'], axis=1)
+        # Sort the dataframe by column name, then by value
+        frame = pd.concat([frame.loc[frame.column_name == col_name].sort_values(by='val') for col_name in categorical_cols])
+        frame.to_csv(r"results\{}_univariate_categorical.csv".format(key.upper()), index=False)
+        
+def write_univariate_date_counts_to_csv():
+    for key, pop_query in pop_queries.items():
+        frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, field_list=date_cols), db)
+        frame['column_name'] = frame['column_name'].astype('category')
+        frame['counts_'+key] = frame['counts_'+key].astype('uint32')
+        frame['val'] = pd.to_datetime(frame['val'], infer_datetime_format=True, errors='coerce')
+        # Sort the dataframe by column name, then by value
+        frame = pd.concat([frame.loc[frame.column_name == col_name].sort_values(by='val') for col_name in date_cols])
+        frame.to_csv(r"results\{}_univariate_dates.csv".format(key.upper()), index=False)
+        
