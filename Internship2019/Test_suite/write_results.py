@@ -139,7 +139,7 @@ def reorder_columns(table, to_front='DIAGNOSISDATEBEST', suffix=''):
 
 
 def write_univariate_categorical_counts_to_csv():
-    for key, pop_query in pop_queries.items()
+    for key, pop_query in pop_queries.items():
         frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, field_list=categorical_cols), db)
         frame['column_name'] = frame['column_name'].astype('category')
         frame['counts_'+key] = frame['counts_'+key].astype('uint32')
@@ -147,7 +147,8 @@ def write_univariate_categorical_counts_to_csv():
         # Sort the dataframe by column name, then by value
         frame = pd.concat([frame.loc[frame.column_name == col_name].sort_values(by='val') for col_name in categorical_cols])
         frame.to_csv(r"results\{}_univariate_categorical.csv".format(key.upper()), index=False)
-        
+
+
 def write_univariate_date_counts_to_csv():
     for key, pop_query in pop_queries.items():
         frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, field_list=date_cols), db)
@@ -157,4 +158,38 @@ def write_univariate_date_counts_to_csv():
         # Sort the dataframe by column name, then by value
         frame = pd.concat([frame.loc[frame.column_name == col_name].sort_values(by='val') for col_name in date_cols])
         frame.to_csv(r"results\{}_univariate_dates.csv".format(key.upper()), index=False)
-        
+
+
+def write_bivariate_categorical_counts_to_csv():
+    for key, pop_query in pop_queries.items():
+        frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, 
+                                                             field_list=categorical_col_pairs, num_variates=2), db)
+        frame[['column_name1', 'column_name2']] = frame[['column_name1', 'column_name2']].astype('category')
+        frame['counts_'+key] = frame['counts_'+key].astype('uint32')
+        # By design, 'AGE' should always be in column_name2 when it appears in a pair
+        frame['val1'] = frame.apply(lambda row: int(row['val1']) if row['column_name1'] == 'AGE' else row['val1'], axis=1)
+        frame['val2'] = frame.apply(lambda row: int(row['val2']) if row['column_name2'] == 'AGE' else row['val2'], axis=1)
+        # Sort the dataframe by column name, then by value
+        frame = pd.concat([frame.loc[
+            (frame.column_name1 == pair[0]) & (frame.column_name2 == pair[1])]
+                                   .sort_values(by=['val1', 'val2']) for pair in categorical_col_pairs])
+        frame.to_csv(r"results\{}_bivariate_categorical.csv".format(key.upper()), index=False)
+
+
+def write_bivariate_date_counts_to_csv():
+    for key, pop_query in pop_queries.items():
+        frame =  pd.read_sql_query(queries.make_totals_query(pop_query, key, 
+                                                             field_list=category_cross_date_pairs, num_variates=2), db)
+        frame[['column_name1', 'column_name2']] = frame[['column_name1', 'column_name2']].astype('category')
+        frame['counts_'+key] = frame['counts_'+key].astype('uint32')
+        # By design, date fields should always be in column_name2 when appearing in the pairs
+        frame['val1'] = frame.apply(lambda row: int(row['val1']) if row['column_name1'] == 'AGE' else row['val1'], axis=1)
+        frame['val2'] = pd.to_datetime(frame['val2'], infer_datetime_format=True, errors='coerce')
+        # Sort the dataframe by column name, then by value
+        frame = pd.concat([frame.loc[
+            (frame.column_name1 == pair[0]) & (frame.column_name2 == pair[1])]
+                                   .sort_values(by=['val1', 'val2']) for pair in category_cross_date_pairs])
+        diagnosis_date_frame = frame.loc[frame.column_name2 == 'DIAGNOSISDATEBEST']
+        surgery_date_frame = frame.loc[frame.column_name2 == 'DATE_FIRST_SURGERY']
+        diagnosis_date_frame.to_csv(r"results\{}_categorical_cross_diagnosis_dates.csv".format(key.upper()), index=False)
+        surgerys_date_frame.to_csv(r"results\{}_categorical_cross_surgery_dates.csv".format(key.upper()), index=False)
