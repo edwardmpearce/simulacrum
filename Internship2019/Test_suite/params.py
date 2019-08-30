@@ -18,15 +18,23 @@ params = dict(dialect='oracle',
 
 
 # Hard-coded list of non-index columns present in SIM_AV_TUMOUR in the Simulacrum. These are the options for the col_name function parameter.
-categorical_cols = ['GRADE', 'AGE', 'SEX', 'CREG_CODE', 'SCREENINGSTATUSFULL_CODE', 'ER_STATUS', 'ER_SCORE', 'PR_STATUS', 'PR_SCORE', 'HER2_STATUS', 'CANCERCAREPLANINTENT', 'PERFORMANCESTATUS', 'CNS', 'ACE27', 'GLEASON_PRIMARY', 'GLEASON_SECONDARY', 'GLEASON_TERTIARY', 'GLEASON_COMBINED', 'LATERALITY', 'QUINTILE_2015', 'SITE_ICD10_O2', 'SITE_ICD10_O2_3CHAR', 'MORPH_ICD10_O2', 'BEHAVIOUR_ICD10_O2', 'T_BEST', 'N_BEST', 'M_BEST', 'STAGE_BEST', 'STAGE_BEST_SYSTEM']
+categorical_cols = ['QUINTILE_2015', 'CREG_CODE', 'GRADE', 'SEX', 'SITE_ICD10_O2', 'SITE_ICD10_O2_3CHAR', 'MORPH_ICD10_O2', 'BEHAVIOUR_ICD10_O2', 'T_BEST', 'N_BEST', 'M_BEST', 'STAGE_BEST', 'STAGE_BEST_SYSTEM', 'SCREENINGSTATUSFULL_CODE', 'ER_STATUS', 'ER_SCORE', 'PR_STATUS', 'PR_SCORE', 'HER2_STATUS', 'LATERALITY', 'GLEASON_PRIMARY', 'GLEASON_SECONDARY', 'GLEASON_TERTIARY', 'GLEASON_COMBINED', 'CANCERCAREPLANINTENT', 'PERFORMANCESTATUS', 'CNS', 'ACE27', 'DIAGNOSISMONTHBEST', 'MONTH_FIRST_SURGERY', 'AGE']
 
 date_cols = ['DIAGNOSISDATEBEST', 'DATE_FIRST_SURGERY']
 
 col_names = categorical_cols + date_cols
 
-
 # List of pairs of non-index columns present in SIM_AV_TUMOUR in the Simulacrum.
 col_name_pairs = [(col_names[i], col_names[j]) for i in range(len(col_names)) for j in range(i+1, len(col_names))]
+
+categorical_col_pairs = [(categorical_cols[i], categorical_cols[j]) 
+                         for i in range(len(categorical_cols)) 
+                         for j in range(i+1, len(categorical_cols))]
+
+category_cross_date_pairs = [(categorical_col, date_col)
+                            for date_col in date_cols
+                            for categorical_col in categorical_cols]
+
 
 
 # Hard-coded dictionary of plotting parameters used by the plot_by_category function. 
