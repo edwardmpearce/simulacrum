@@ -4,8 +4,16 @@
 """
 This file contains the following module parameters:
     * params - Connection parameters for the database.connect function
-    * col_names - A list of the non-index columns present in SIM_AV_TUMOUR in the Simulacrum. These are the options for the col_name function parameter.
+    * filepath_dictionary - Contains names of filepaths where local copies of group counts data can be stored
+    
+Column name related parameters, mostly encapsulated in the variable `field_list_dict` which stores various lists of column names and pairs of column names:
+    * categorical_cols - A list of non-index column names for categorical/discrete value fields in SIM_AV_TUMOUR, plus two derived categorical fields.
+    * date_cols - A list of non-index column names for date value fields in SIM_AV_TUMOUR.
+    * col_names - The concatenation of the two lists `categorical_cols` and `date_cols`.
     * col_name_pairs - List of pairs of non-index columns present in SIM_AV_TUMOUR in the Simulacrum.
+    * categorical_col_pairs - 
+    * category_cross_date_pairs - 
+    
     * plot_params_dict - A dictionary of plotting parameters used by the plots.plot_by_category function. The keys are plot_type options and the values are dictionaries of plotting parameters.
 """
 
@@ -35,6 +43,25 @@ category_cross_date_pairs = [(categorical_col, date_col)
                             for date_col in date_cols
                             for categorical_col in categorical_cols]
 
+field_list_dict = {'univariate_categorical': categorical_cols,
+                   'univariate_dates': date_cols,
+                   'bivariate_categorical': categorical_col_pairs,
+                   'categorical_cross_diagnosis_date': [(categorical_col, 'DIAGNOSISDATEBEST') for categorical_col in categorical_cols],
+                   'categorical_cross_surgery_date': [(categorical_col, 'DATE_FIRST_SURGERY') for categorical_col in categorical_cols],
+                   'surgery_date_cross_diagnosis_date': [('DATE_FIRST_SURGERY', 'DIAGNOSISDATEBEST')]
+                   }
+
+
+# File names used for storing, retrieving local copies of grouped counts data extracted from the SQL database
+filepath_templates = {'univariate_categorical': r"results\{}_univariate_categorical.csv",
+                      'univariate_dates': r"results\{}_univariate_dates.csv",
+                      'bivariate_categorical': r"results\{}_bivariate_categorical.csv",
+                      'categorical_cross_diagnosis_date': r"results\{}_categorical_cross_diagnosis_dates.csv",
+                      'categorical_cross_surgery_date': r"results\{}_categorical_cross_surgery_dates.csv",
+                      'surgery_date_cross_diagnosis_date': r"results\{}_bivariate_counts_double_dates.csv"
+                      }
+
+filepath_dictionary = {count_type: {key: template.format(key.upper()) for key in ['sim1', 'sim2', 'av2015', 'av2017']} for count_type, template in filepath_templates.items()}
 
 
 # Hard-coded dictionary of plotting parameters used by the plot_by_category function. 
