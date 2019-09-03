@@ -108,20 +108,20 @@ SIM_SACT_AllLevels AS
 /*  Therefore we add the difference in time between DiagnosisDateBest and Start_Date_of_Regimen to calculate age at regimen start date */
 	NVL(TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)), '') AS Age_at_Regimen_Start,
 	NVL(CASE
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 0 AND 15 THEN '0-15'
-    WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 16 AND 18 THEN '16-18' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 19 AND 24 THEN '19-24'			
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 25 AND 29 THEN '25-29'			 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 30 AND 34 THEN '30-34' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 35 AND 39 THEN '35-39' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 40 AND 44 THEN '40-44' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 45 AND 49 THEN '45-49' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 50 AND 54 THEN '50-54' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 55 AND 59 THEN '55-59' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 60 AND 64 THEN '60-64' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 65 AND 69 THEN '65-69' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 70 AND 74 THEN '70-74' 
-	WHEN (SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 75 AND 79 THEN '75-79' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 0 AND 15 THEN '0-15'
+    WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 16 AND 18 THEN '16-18' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 19 AND 24 THEN '19-24'			
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 25 AND 29 THEN '25-29'			 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 30 AND 34 THEN '30-34' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 35 AND 39 THEN '35-39' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 40 AND 44 THEN '40-44' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 45 AND 49 THEN '45-49' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 50 AND 54 THEN '50-54' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 55 AND 59 THEN '55-59' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 60 AND 64 THEN '60-64' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 65 AND 69 THEN '65-69' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 70 AND 74 THEN '70-74' 
+	WHEN TRUNC(SIM_AV_T.Age + (MONTHS_BETWEEN(SIM_SACT_R.Start_Date_of_Regimen, SIM_AV_T.DiagnosisDateBest)/12)) BETWEEN 75 AND 79 THEN '75-79' 
 	ELSE '80+' END,
 	'') AS AgeGroup,		
 	NVL(SIM_SACT_R.Intent_of_Treatment, '') AS Intent_of_Treatment,
@@ -353,7 +353,7 @@ AND Outcome_Expected IS NOT NULL)
 
 /* **************************************** Part Four **************************************** */
 
-/* Uncomment the relevant lines of code to choose the extract you want to create/the table you want to view. */
+/* Uncomment the relevant line of code to choose the extract you want to create/the table you want to view. */
 SELECT *
 --FROM SIM_SACT_RegimenLevel;
 --FROM SIM_SACT_DrugLevel;
