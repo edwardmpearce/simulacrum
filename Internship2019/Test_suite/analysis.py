@@ -43,13 +43,9 @@ def read_counts(count_type):
         elif count_type == 'bivariate_categorical': 
             counts_tables[key] = pd.read_csv(filepath,
                                              dtype={'column_name1': 'category', 'column_name2': 'category', 'counts_'+key: 'uint32'})
-        elif count_type == 'categorical_cross_diagnosis_date': 
+        elif count_type in ['categorical_cross_diagnosis_date', 'categorical_cross_surgery_date']: 
             counts_tables[key] = pd.read_csv(filepath, usecols=[0, 2, 3, 4],
-                                             parse_dates={'DIAGNOSISDATEBEST': [2]}, infer_datetime_format=True,
-                                             dtype={'column_name1': 'category', 'counts_'+key: 'uint32'})
-        elif count_type == 'categorical_cross_surgery_date': 
-            counts_tables[key] = pd.read_csv(filepath, usecols=[0, 2, 3, 4],
-                                             parse_dates={'DATE_FIRST_SURGERY': [2]}, infer_datetime_format=True,
+                                             parse_dates=[2], infer_datetime_format=True,
                                              dtype={'column_name1': 'category', 'counts_'+key: 'uint32'})
         elif count_type == 'surgery_date_cross_diagnosis_date': 
             counts_tables[key] = pd.read_csv(filepath, usecols=[2, 3, 4],
