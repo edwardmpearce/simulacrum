@@ -8,7 +8,11 @@ This file can be imported as a module and contains the following functions:
 """
 
 # Third-party imports
+import numpy as np
 import plotly.graph_objects as go
+
+# Local packages
+from params import field_list_dict
 
 
 __author__ = 'Edward Pearce'
@@ -58,7 +62,7 @@ def plot_univariate_categorical_results(results_dict, col_name):
     return fig
 
 
-def plot_bivariate_categorical_results(results_dict, col_name1, col_name2):
+def plot_bivariate_categorical_results(results_dict, col_name1, col_name2, display=True):
     r"""Produces heatmaps of z-test statistics by field value pairs.
 
     Produces a dictionary of interactive heatmaps of z-test statistics based on value counts in field value pairs for the given pair of data fields. One heatmap is created for each table of z-test results passed in the input dictionary.
@@ -125,8 +129,11 @@ def plot_bivariate_categorical_results(results_dict, col_name1, col_name2):
         elif col_name2 == 'AGE':
             fig[pair].update_yaxes({'categoryorder': 'array', 
                                     'categoryarray': [str(number) for number in sorted(y_vals.astype('uint8'))]})
+    if display == True:
     # Display the plots!
-    for key, plot in fig.items():
-        plot.show()
-    return fig
+        for key, plot in fig.items():
+            plot.show()
+        return
+    else:
+        return fig
 
