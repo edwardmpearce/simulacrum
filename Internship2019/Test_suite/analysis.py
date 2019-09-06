@@ -59,8 +59,8 @@ def read_counts(count_type):
 join_cols = {'univariate_categorical': ['column_name', 'val'], 
               'univariate_dates': ['column_name', 'val'],
               'bivariate_categorical': ['column_name1', 'column_name2', 'val1', 'val2'], 
-              'categorical_cross_diagnosis_date': ['column_name1', 'val1', 'DIAGNOSISDATEBEST'], 
-              'categorical_cross_surgery_date': ['column_name1', 'val1', 'DATE_FIRST_SURGERY'], 
+              'categorical_cross_diagnosis_date': ['column_name1', 'val1', 'val2'], 
+              'categorical_cross_surgery_date': ['column_name1', 'val1', 'val2'], 
               'surgery_date_cross_diagnosis_date': ['DATE_FIRST_SURGERY', 'DIAGNOSISDATEBEST']}
 
 
