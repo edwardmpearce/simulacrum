@@ -125,7 +125,7 @@ def compute_ks_test(pair, comparison_table, grouping='univariate'):
         group_cols = ['column_name']
     elif grouping == 'bivariate':
         group_cols = ['column_name1', 'val1']
-    results = cdf_table[group_cols + ['cdf_diff']].groupby(by=group_cols).max()
+    results = cdf_table[group_cols + ['cdf_diff']].groupby(by=group_cols).max().dropna()
     results.columns = ['ks_test_statistic']
     results['ks_scaled'] = results['ks_test_statistic'] * np.sqrt((pop_sizes[pair[0]] * pop_sizes[pair[1]])/(pop_sizes[pair[0]] + pop_sizes[pair[1]]))
     results['p_value'] = np.exp(-2 * np.square(results['ks_scaled']))
