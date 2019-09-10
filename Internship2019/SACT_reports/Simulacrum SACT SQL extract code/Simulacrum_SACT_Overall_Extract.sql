@@ -1,5 +1,12 @@
-/* Written by Edward Pearce - 15th August 2019 */
+/* Written by Edward Pearce - 9th September 2019 */
 /* Based on work by Bukky Juwa - 17th Jan 2019, ADAM BROWN - 17TH JANUARY 2019, and Carrie - 25th June 2018 */
+
+/* Warning! This code is not the latest version and is known to contain serious errors in SQL join logic which dramatically increases runtime. */
+/* For the production level code, please see the SQL files for individual extracts (regimen/cycle, drug, and outcome levels, and CTYA). */
+/* Whilst ultimately it was deemed more efficient to compartmentalize the SQL code in this way (thus reducing join sizes, number of columns, etc.), */
+/* for a while it seemed sensible to construct all of the required fields into a single 'master table' first, */
+/* and subsequently select the relevant subset of fields for each extract since there was a significant amount of overlap in the fields used */
+/* It is hoped that retaining this code will usefully serve as a kind of 'data dictionary' on methods for extracting certain data from the SIM_SACT tables*/
 
 /* This creates the non-CTYA level SAS extracts (regimen/cycle, drug, and outcome levels) from Simulacrum datasets (simulated SACT and AV tables) */
 
@@ -15,8 +22,9 @@
 /* The code is split up into four sections: */
 /* In Part One, the tables 'TreatmentDates' and 'Derived_Regimen_Fields' are introduced to define some intermediate variables */
 /* In Part Two, the table 'SIM_SACT_AllLevels' is introduced to join the various Simulacrum data sources together and define several derived fields */
-/* In Part Three, the tables 'SIM_SACT_RegimenLevel', 'SIM_SACT_DrugLevel', and 'SIM_SACT_OutcomeLevel' are defined using subsets of fields from 'SIM_SACT_AllLevels' and the user-input dates from the Extract_Dates table */
-/* In Part Four, the user is able to select which table they want to view at the end of the file */
+/* In Part Three, the tables 'SIM_SACT_RegimenLevel', 'SIM_SACT_DrugLevel', and 'SIM_SACT_OutcomeLevel' are defined using subsets of fields from 'SIM_SACT_AllLevels' */
+/* These subtables are constrained according to the user-input dates from the Extract_Dates table */
+/* In Part Four, the user is able to select which table they want to view at the end of the file
 
 /* **************************************** Part One **************************************** */
 

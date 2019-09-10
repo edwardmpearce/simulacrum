@@ -20,12 +20,17 @@
 /* **************************************** Part One **************************************** */
 
 WITH
-/* Change these dates when creating a new monthly update */	
+/* Change this date at your leisure/when creating a new monthly update */
+/* Note: Version 1 of the Simulacrum is based on legacy SACT tables and will only require updating with new versions */
+/* We report the following extract sizes (number of rows) for given extract start/end dates when running the code on Simulacrum Version 1 (SIM_SACT_X_FINAL tables): */
+/* Outcomes between 01-04-2018 and 30-11-2018 returns 580 rows; Outcomes between 01-04-2017 and 30-11-2017 returns 11,335 rows */
+/* We report the following extract sizes (number of rows) for given extract start/end dates when running the code on Simulacrum Version 2 (SIM_SACT_X_SimII tables): */
+/* Outcomes between 01-04-2017 and 30-11-2017 returns 282,003 rows */
 Extract_Dates AS
 (SELECT 
-	TO_DATE('01-04-2018','DD-MM-YYYY') AS Extract_Start,
-	TO_DATE('31-12-2018','DD-MM-YYYY') AS Latest_Treatment_Check, -- Change date on each new extraction to 3 months before most recent SACT data
-	TO_DATE('30-11-2018','DD-MM-YYYY') AS Outcome_Extract_End
+	TO_DATE('01-04-2017','DD-MM-YYYY') AS Extract_Start,
+	TO_DATE('31-12-2017','DD-MM-YYYY') AS Latest_Treatment_Check, -- Change date on each new extraction to 3 months before most recent SACT data
+	TO_DATE('30-11-2017','DD-MM-YYYY') AS Outcome_Extract_End
 FROM DUAL), 
 
 
@@ -34,16 +39,16 @@ Derived_Fields AS
 	SIM_SACT_C.Merged_Regimen_ID AS Merged_Regimen_ID,
 /*  The Simulacrum currently does NOT contain the field 'Adult_Perf_Stat_Start_of_Reg' */
 /*  An estimate is generated using the earliest Perf_Status_Start_of_Cycle in a regimen */
-	MAX(NVL(SIM_SACT_C.Perf_Status_Start_of_Cycle, '')) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_C.Start_Date_of_Cycle, SIM_SACT_C.Merged_Cycle_ID) AS Perf_Status_Start_of_Reg,
+	MAX(SIM_SACT_C.Perf_Status_Start_of_Cycle) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_C.Start_Date_of_Cycle, SIM_SACT_C.Merged_Cycle_ID) AS Perf_Status_Start_of_Reg,
 /*  The Simulacrum currently does NOT contain the tumour-level field 'Organisation_Code_of_Provider' (initiating treatment) */
 /*  We obtain estimates for the 'Provider' and 'Trust' (initiating treatment) fields using the drug-level field 'Org_Code_of_Drug_Provider' with the earliest 'Administration_Date' in the regimen */
 /*  This means that the 'Provider/Trust that initiated treatment' may change between regimens for the same Merged_Tumour_ID where they would not in the real SACT data */
-	MAX(NVL(SIM_SACT_D.Org_Code_of_Drug_Provider, '')) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_D.Administration_Date, SIM_SACT_D.Merged_Drug_Detail_ID) AS Provider,
-	MAX(NVL(SUBSTR(SIM_SACT_D.Org_Code_of_Drug_Provider, 1, 3), '')) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_D.Administration_Date, SIM_SACT_D.Merged_Drug_Detail_ID) AS Trust,
-	MAX(NVL(SIM_SACT_C.Start_Date_of_Cycle, '')) KEEP (DENSE_RANK LAST ORDER BY SIM_SACT_C.Start_Date_of_Cycle, SIM_SACT_C.Merged_Cycle_ID) AS Latest_Cycle,
-	MAX(NVL(SIM_SACT_D.Administration_Date, '')) KEEP (DENSE_RANK LAST ORDER BY SIM_SACT_D.Administration_Date, SIM_SACT_D.Merged_Drug_Detail_ID) AS Latest_Admin_Date
-FROM ANALYSISPAULCLARKE.SIM_SACT_CYCLE_FINAL SIM_SACT_C
-LEFT JOIN ANALYSISPAULCLARKE.SIM_SACT_DRUG_DETAIL_FINAL SIM_SACT_D
+	MAX(SIM_SACT_D.Org_Code_of_Drug_Provider) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_D.Administration_Date, SIM_SACT_D.Merged_Drug_Detail_ID) AS Provider,
+	MAX(SUBSTR(SIM_SACT_D.Org_Code_of_Drug_Provider, 1, 3)) KEEP (DENSE_RANK FIRST ORDER BY SIM_SACT_D.Administration_Date, SIM_SACT_D.Merged_Drug_Detail_ID) AS Trust,
+	MAX(SIM_SACT_C.Start_Date_of_Cycle) AS Latest_Cycle,
+	MAX(SIM_SACT_D.Administration_Date) AS Latest_Admin_Date
+FROM ANALYSISPAULCLARKE.SIM_SACT_CYCLE_SimII SIM_SACT_C
+LEFT JOIN ANALYSISPAULCLARKE.SIM_SACT_DRUG_DETAIL_SimII SIM_SACT_D
 ON SIM_SACT_D.Merged_Cycle_ID = SIM_SACT_C.Merged_Cycle_ID
 GROUP BY SIM_SACT_C.Merged_Regimen_ID),
 
@@ -59,9 +64,9 @@ Derived_Regimen_Fields AS
     WHEN DF.Latest_Admin_Date >= DF.Latest_Cycle AND DF.Latest_Admin_Date >= SIM_SACT_R.Start_Date_of_Regimen THEN DF.Latest_Admin_Date
 	WHEN DF.Latest_Cycle >= DF.Latest_Admin_Date AND DF.Latest_Cycle >= SIM_SACT_R.Start_Date_of_Regimen THEN DF.Latest_Cycle
     WHEN SIM_SACT_R.Start_Date_of_Regimen >= DF.Latest_Cycle AND SIM_SACT_R.Start_Date_of_Regimen >= DF.Latest_Admin_Date THEN SIM_SACT_R.Start_Date_of_Regimen
-	ELSE NULL END AS Latest_Treatment_Date	
+	ELSE NULL END AS Latest_Treatment_Date
 /*  If the comparisons above cannot be streamlined into MIN/MAX statements, could we reduce the number of comparisons to 3 instead of 6 using binary search logic? */	
-FROM ANALYSISPAULCLARKE.SIM_SACT_REGIMEN_FINAL SIM_SACT_R
+FROM ANALYSISPAULCLARKE.SIM_SACT_REGIMEN_SimII SIM_SACT_R
 LEFT JOIN Derived_Fields DF
 ON DF.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID),
 
@@ -76,29 +81,29 @@ SIM_SACT_OutcomeLevel AS
 /*  The Simulacrum currently does NOT contain the tumour-level field 'Organisation_Code_of_Provider' (initiating treatment) */
 /*  We obtain estimates for the 'Provider' and 'Trust' (initiating treatment) fields using the drug-level field 'Org_Code_of_Drug_Provider' with the earliest 'Administration_Date' in the regimen */
 /*  This means that the 'Provider/Trust that initiated treatment' may change between regimens for the same Merged_Tumour_ID where they would not in the real SACT data */
-    NVL(R1.Provider, '') AS Provider,
-    NVL(R1.Trust, '') as Trust,
-    NVL(SIM_SACT_R.Merged_Regimen_ID, '') AS Merged_Regimen_ID,
-	NVL(TO_CHAR(SIM_SACT_R.Start_Date_of_Regimen, 'MON/YYYY'), '') AS Start_Month_of_Regimen,
-	NVL(SIM_SACT_R.Intent_of_Treatment, '') AS Intent_of_Treatment,
-    NVL(SIM_SACT_R.Mapped_Regimen, '') AS Mapped_Regimen,
+    R1.Provider AS Provider,
+    R1.Trust as Trust,
+    SIM_SACT_R.Merged_Regimen_ID AS Merged_Regimen_ID,
+	TO_CHAR(SIM_SACT_R.Start_Date_of_Regimen, 'MON/YYYY') AS Start_Month_of_Regimen,
+	SIM_SACT_R.Intent_of_Treatment AS Intent_of_Treatment,
+    SIM_SACT_R.Mapped_Regimen AS Mapped_Regimen,
 /*  The fields 'Benchmark' and 'Analysis' are derived from MappedRegimen using the Benchmark Analysis Lookup */	
-    NVL(BAL.Benchmark, '') as Benchmark,
-    NVL(BAL.Analysis, '') as Analysis,
+    BAL.Benchmark as Benchmark,
+    BAL.Analysis as Analysis,
 /*  The Simulacrum currently does NOT contain the field 'Adult_Perf_Stat_Start_of_Reg' */
 /*  An estimate is generated using the first Perf_Status_Start_of_Cycle in a regimen */
-    NVL(R1.Perf_Status_Start_of_Reg, '') AS Perf_Status_Start_of_Reg,
-    NVL(CAST(SIM_SACT_R.Weight_At_Start_of_Regimen AS VARCHAR(20)), '') AS Weight_at_Start_of_Regimen,
-    NVL(CAST(SIM_SACT_R.Height_At_Start_of_Regimen AS VARCHAR(20)), '') AS Height_at_Start_of_Regimen,	
+    R1.Perf_Status_Start_of_Reg AS Perf_Status_Start_of_Reg,
+    CAST(SIM_SACT_R.Weight_At_Start_of_Regimen AS VARCHAR(20)) AS Weight_at_Start_of_Regimen,
+    CAST(SIM_SACT_R.Height_At_Start_of_Regimen AS VARCHAR(20)) AS Height_at_Start_of_Regimen,	
     CASE WHEN SIM_SACT_R.Weight_at_Start_of_Regimen > 0.0 THEN 'Y' ELSE '' END AS Weight_Regimen_Completeness,
     CASE WHEN SIM_SACT_R.Height_At_Start_of_Regimen > 0.0 THEN 'Y' ELSE '' END AS Height_Regimen_Completeness,
-    NVL(SIM_SACT_C.Merged_Cycle_ID, '') AS Merged_Cycle_ID,
-    NVL(TO_CHAR(SIM_SACT_C.Start_Date_of_Cycle, 'MON/YYYY'), '') as Start_Month_of_Cycle,
-    NVL(SIM_SACT_C.Perf_Status_Start_of_Cycle, '') AS Perf_Status_Start_of_Cycle,
+    SIM_SACT_C.Merged_Cycle_ID AS Merged_Cycle_ID,
+    TO_CHAR(SIM_SACT_C.Start_Date_of_Cycle, 'MON/YYYY') as Start_Month_of_Cycle,
+    SIM_SACT_C.Perf_Status_Start_of_Cycle AS Perf_Status_Start_of_Cycle,
 /*  The Simulacrum currently does NOT contain the field 'Weight_at_Start_of_Cycle' */
 /*  Therefore the fields 'Weight_at_Start_of_Cycle' and 'Weight_Cycle_Completeness' cannot be extracted from the Simulacrum */
-    NVL(SIM_SACT_O.Merged_Outcome_ID, '') AS Merged_Outcome_ID,
-    NVL(SIM_SACT_O.Regimen_Outcome_Summary, '') AS Regimen_Outcome_Summary,
+    SIM_SACT_O.Merged_Outcome_ID AS Merged_Outcome_ID,
+    SIM_SACT_O.Regimen_Outcome_Summary AS Regimen_Outcome_Summary,
 /*  We create a field called Outcome_Expected which has codes 1,2,3 to denote: */
 /*  3. Regimen Outcome Summary received */
 /*  1. NO Regimen Outcome Summary received and Patient died */
@@ -125,18 +130,18 @@ SIM_SACT_OutcomeLevel AS
 /*  CDF Exclusions (coded as 'E8' exclusions) are currently excluded from this extract since they will require extra work to be derived from Simulacrum data */
 	ELSE SIM_SACT_R.Mapped_Regimen END
 	AS Exclusion
-FROM ANALYSISPAULCLARKE.SIM_SACT_REGIMEN_FINAL SIM_SACT_R
-INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_CYCLE_FINAL SIM_SACT_C
+FROM ANALYSISPAULCLARKE.SIM_SACT_REGIMEN_SimII SIM_SACT_R
+INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_CYCLE_SimII SIM_SACT_C
 ON SIM_SACT_C.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID
-LEFT JOIN ANALYSISPAULCLARKE.SIM_SACT_OUTCOME_FINAL SIM_SACT_O 
+LEFT JOIN ANALYSISPAULCLARKE.SIM_SACT_OUTCOME_SimII SIM_SACT_O 
 ON SIM_SACT_O.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID
 /* SIM_SACT_T and SIM_SACT_P are used only to link to SIM_AV_P to derive 'Month_of_Death' and 'Outcome_Expected' */
-INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_TUMOUR_FINAL SIM_SACT_T
+INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_TUMOUR_SimII SIM_SACT_T
 ON SIM_SACT_R.Merged_Tumour_ID = SIM_SACT_T.Merged_Tumour_ID
-INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_PATIENT_FINAL SIM_SACT_P
+INNER JOIN ANALYSISPAULCLARKE.SIM_SACT_PATIENT_SimII SIM_SACT_P
 ON SIM_SACT_T.Merged_Patient_ID = SIM_SACT_P.Merged_Patient_ID
 /*  Used to derive patient-level field 'Month_of_Death', and 'Outcome_Expected' */
-LEFT JOIN ANALYSISPAULCLARKE.SIM_AV_PATIENT_FINAL SIM_AV_P
+LEFT JOIN ANALYSISPAULCLARKE.SIM_AV_PATIENT_SimII SIM_AV_P
 ON SIM_AV_P.LinkNumber = SIM_SACT_P.Link_Number
 /*  Used to obtain regimen-level field 'Benchmark', which is used when deriving the 'Exclusion' field */
 LEFT JOIN ANALYSISBUKKYJUWA.BENCHMARK_ANALYSIS_LOOKUP_NEW BAL
