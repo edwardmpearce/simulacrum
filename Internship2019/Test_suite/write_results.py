@@ -22,7 +22,7 @@ __license__ = 'MIT'
 __version__ = '1.0.0'
 __maintainer__ = 'Edward Pearce'
 __email__ = 'edward.pearce@phe.gov.uk'
-__status__ = 'Development'
+__status__ = 'Production'
 
 
 def get_totals_from_db(count_type, key, db):

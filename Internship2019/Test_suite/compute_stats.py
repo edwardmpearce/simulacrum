@@ -8,6 +8,7 @@ This file can be imported as a module and contains the following functions:
     * compute_chi2_test - Compute Pearson's chi-squared test statistics based on value counts data from two populations
     * compute_cdf - Compute cumulative distribution functions (CDF) based on ordered value counts data for a pair of populations
     * compute_ks_test - Compute Kolmogorov-Smirnov test statistics based on ordered value counts data by field from two populations
+This module also contains the parameter `pop_sizes` which is a dictionary containing the number of data entries (rows) in the source cohort tables.
 """
 
 # Third-party imports

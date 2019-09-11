@@ -21,7 +21,7 @@ __license__ = 'MIT'
 __version__ = '1.0.0'
 __maintainer__ = 'Edward Pearce'
 __email__ = 'edward.pearce@phe.gov.uk'
-__status__ = 'Development'
+__status__ = 'Production'
 
 
 def read_counts(count_type):
