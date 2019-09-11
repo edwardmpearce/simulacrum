@@ -7,7 +7,6 @@ This file can be imported as a module and contains the following functions:
     * make_totals_query - returns an SQL query to get counts of values in a list of columns
     * all_counts_query - returns an SQL query to get linked value counts from a list of columns in a pair of datasets.
     * compute_stats_query - returns an SQL query to compute statistics based on value counts from a pair of datasets.
-    * chi2_query - returns an SQL query to compute chi-squared statistics between fields in a pair of datasets.
 """
 
 
@@ -16,12 +15,12 @@ from params import col_names, col_name_pairs
 
 __author__ = 'Edward Pearce'
 __copyright__ = 'Copyright 2019, Simulacrum Test Suite'
-__credits__ = ['Edward Pearce', 'Paul Clarke', 'Cong Chen']
+__credits__ = ['Edward Pearce']
 __license__ = 'MIT'
 __version__ = '1.0.0'
 __maintainer__ = 'Edward Pearce'
 __email__ = 'edward.pearce@phe.gov.uk'
-__status__ = 'Development'
+__status__ = 'Production'
 
 
 def get_cols_query(owner, table, condition=""):
@@ -132,12 +131,13 @@ population_sim AS ({sim_pop_query}),
 r AS ({real_totals_query}),
 s AS ({sim_totals_query}),
 all_counts AS
-(SELECT NVL(r.column_name, s.column_name) AS col_name, NVL(NVL(r.val, s.val), 'None') AS val,
-NVL(counts_real, 0) AS counts_r, NVL(counts_sim, 0) AS counts_s
+(SELECT 
+NVL(r.column_name, s.column_name) AS col_name,
+COALESCE(r.val, s.val, 'None') AS val,
+NVL(counts_real, 0) AS counts_r,
+NVL(counts_sim, 0) AS counts_s
 FROM r FULL OUTER JOIN s
-ON (r.column_name = s.column_name AND (r.val = s.val OR (r.val IS NULL AND s.val IS NULL)))
-OR (r.column_name = 'CREG_CODE' AND s.column_name = 'CREG_CODE' AND SUBSTR(r.val, 2) = SUBSTR(s.val, 2))
-OR (r.column_name = 'QUINTILE_2015' AND s.column_name = 'QUINTILE_2015' AND SUBSTR(r.val, 1, 1) = SUBSTR(s.val, 1, 1)))
+ON r.column_name = s.column_name AND NVL(r.val, 'None') = NVL(s.val, 'None'))
 '''.replace('\n', ' ').format(real_pop_query=real_pop_query, 
                               sim_pop_query=sim_pop_query,
                               real_totals_query=make_totals_query(real_pop_query, 'real', standalone=False),
