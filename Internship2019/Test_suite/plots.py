@@ -5,10 +5,13 @@
 This file can be imported as a module and contains the following functions:
     * plot_univariate_categorical_results - Plot grouped bar charts of z-test statistics by field values
     * plot_bivariate_categorical_results - Plot heatmaps of z-test statistics by field value pairs
+    * make_hovertext - Create a Series of hovertext strings for a list of columns in a DataFrame for use in Plotly
+    * plot_univariate_chi2_test_results - Plot grouped bar charts of chi-squared test statistics by field
 """
 
 # Third-party imports
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 
 # Local packages
@@ -136,4 +139,49 @@ def plot_bivariate_categorical_results(results_dict, col_name1, col_name2, displ
         return
     else:
         return fig
+
+
+def make_hovertext(table, column_labels):
+    r"""Create a Series of hovertext strings for a list of columns in a DataFrame for use in Plotly.
+    
+    Returns a Series of the same length as the input DataFrame containing hovertext strings detailing the values in the passed list of columns"""
+    string_series = pd.concat([table[label].apply(lambda val: '{}={}<br>'.format(label, val)) for label in column_labels], axis=1).sum(axis=1)
+    return string_series
+
+
+def plot_univariate_chi2_test_results(results_dict):
+    r"""Produces grouped bar charts of chi-squared test statistics by field.
+
+    Produces interactive grouped bar charts of chi-squared test statistics based on value counts in each field.
+    One group of bar charts is drawn for each table of chi-squared test results (pairs of source tables being compared) passed in the input dictionary.
+
+    Parameters
+    ----------
+    results_dict : dictionary of pandas DataFrame objects
+        The dataframes of chi-squared test results from which we draw the data to plot
+
+    Returns
+    -------
+    A plotly.graph_objects Figure
+        The Figure object containing our plot
+
+    """
+    marker_colour = {('sim1', 'av2015'): 'blue', ('sim2', 'av2017'): 'lightskyblue'}
+    fig = go.Figure()
+    # For each pair of source tables to compare, plot the z-test statistics by value in a given field, highlighting high absolute values
+    for pair, results_table in results_dict.items():
+        fig.add_trace(go.Bar(name=pair[0]+' vs. '+pair[1],
+                             orientation='h',
+                             x=results_table.normalized_score,
+                             y=results_table.index, 
+                             marker_color=marker_colour[pair],
+                             hoverinfo="name+y+text",
+                             hovertext=make_hovertext(results_table, ['pearson_chi2_test', 'degrees_of_freedom', 'normalized_score'])))
+    # Change the bar mode, set axis titles
+    fig.update_layout(barmode='group', 
+                      xaxis_title='Normalized score', 
+                      yaxis_title='Field name', 
+                      title='Univariate chi-squared test results', 
+                      yaxis_categoryorder='total ascending')
+    return fig
 
