@@ -25,7 +25,7 @@ WITH
 /* We report the following extract sizes (number of rows) for given extract start/end dates when running the code on Simulacrum Version 1 (SIM_SACT_X_FINAL tables): */
 /* Outcomes between 01-04-2018 and 30-11-2018 returns 580 rows; Outcomes between 01-04-2017 and 30-11-2017 returns 11,335 rows */
 /* We report the following extract sizes (number of rows) for given extract start/end dates when running the code on Simulacrum Version 2 (SIM_SACT_X_SimII tables): */
-/* Outcomes between 01-04-2017 and 30-11-2017 returns 282,003 rows */
+/* Outcomes between 01-04-2017 and 30-11-2017 returns 341,018 rows */
 Extract_Dates AS
 (SELECT 
 	TO_DATE('01-04-2017','DD-MM-YYYY') AS Extract_Start,
@@ -59,13 +59,14 @@ Derived_Regimen_Fields AS
 	DF.Perf_Status_Start_of_Reg AS Perf_Status_Start_of_Reg,
 	DF.Provider AS Provider,
 	DF.Trust AS Trust,
-/*  Latest_Treatment_Date - Selects the latest (maximum) date out of all Cycle start dates, Drug Administration dates and the Regimen start date within a regimen */
-	CASE -- Can this be written more clearly as a MAX statement over the three quantities of interest?
-    WHEN DF.Latest_Admin_Date >= DF.Latest_Cycle AND DF.Latest_Admin_Date >= SIM_SACT_R.Start_Date_of_Regimen THEN DF.Latest_Admin_Date
-	WHEN DF.Latest_Cycle >= DF.Latest_Admin_Date AND DF.Latest_Cycle >= SIM_SACT_R.Start_Date_of_Regimen THEN DF.Latest_Cycle
-    WHEN SIM_SACT_R.Start_Date_of_Regimen >= DF.Latest_Cycle AND SIM_SACT_R.Start_Date_of_Regimen >= DF.Latest_Admin_Date THEN SIM_SACT_R.Start_Date_of_Regimen
-	ELSE NULL END AS Latest_Treatment_Date
-/*  If the comparisons above cannot be streamlined into MIN/MAX statements, could we reduce the number of comparisons to 3 instead of 6 using binary search logic? */	
+/*  Latest_Treatment_Date - Selects the latest (maximum) date out of all Cycle start dates, Drug Administration dates and the Regimen start date within a regimen, ignoring null values */
+/*  The COALESCE function returns the first non-null expression in the expression list */
+/*  and is used here to ensure that null values do not propagate through the GREATEST function to give an invalid results unless all three dates are null */
+	GREATEST(
+	    COALESCE(DF.Latest_Admin_Date, DF.Latest_Cycle, SIM_SACT_R.Start_Date_of_Regimen),
+		COALESCE(DF.Latest_Cycle, SIM_SACT_R.Start_Date_of_Regimen, DF.Latest_Admin_Date), 
+		COALESCE(SIM_SACT_R.Start_Date_of_Regimen, DF.Latest_Admin_Date, DF.Latest_Cycle)
+	) AS Latest_Treatment_Date	
 FROM ANALYSISPAULCLARKE.SIM_SACT_REGIMEN_SimII SIM_SACT_R
 LEFT JOIN Derived_Fields DF
 ON DF.Merged_Regimen_ID = SIM_SACT_R.Merged_Regimen_ID),
