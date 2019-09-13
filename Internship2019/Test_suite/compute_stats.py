@@ -81,8 +81,10 @@ def compute_chi2_test(pair, comparison_table, grouping='univariate'):
     # Aggregate the data and rename the columns
     results = pd.concat([grouped.size(), grouped['pearson_chi2_test'].sum(), grouped.size() - 1], axis=1)
     results.columns = ['category_size', 'pearson_chi2_test', 'degrees_of_freedom']
+    # Normalize the chi-squared test statistics by subtracting the mean and dividing by standard deviation
+    results['normalized_score'] = (results['pearson_chi2_test'] - results['degrees_of_freedom']) / np.sqrt(2 * results['degrees_of_freedom'])
     # Apply the Wilson–Hilferty transformation to the chi-squared test statistics to approximately normalize them (under null hypothesis)
-    results['normalized_score'] = (np.cbrt(results['pearson_chi2_test']/results['degrees_of_freedom'])
+    results['Wilson–Hilferty_score'] = (np.cbrt(results['pearson_chi2_test']/results['degrees_of_freedom'])
                                    - (1 - 2/(9 * results['degrees_of_freedom']))) / (2/(9 * results['degrees_of_freedom']))
     return results
 
