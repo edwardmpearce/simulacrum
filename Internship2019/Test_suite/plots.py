@@ -7,6 +7,7 @@ This file can be imported as a module and contains the following functions:
     * plot_bivariate_categorical_results - Plot heatmaps of z-test statistics by field value pairs
     * make_hovertext - Create a Series of hovertext strings for a list of columns in a DataFrame for use in Plotly
     * plot_univariate_chi2_test_results - Plot grouped bar charts of chi-squared test statistics by field
+This module also contains the parameter `marker_colour` which is a dictionary defining how bar charts are coloured based on the pair of source cohort tables being compared.
 """
 
 # Third-party imports
@@ -28,6 +29,10 @@ __email__ = 'edward.pearce@phe.gov.uk'
 __status__ = 'Development'
 
 
+# This variable defines how bar charts are coloured for each pair of source cohort tables being compared
+marker_colour = {('sim1', 'av2015'): 'blue', ('sim2', 'av2017'): 'lightskyblue'}
+
+
 def plot_univariate_categorical_results(results_dict, col_name):
     r"""Produces grouped bar charts of z-test statistics by field values.
 
@@ -47,7 +52,6 @@ def plot_univariate_categorical_results(results_dict, col_name):
         The Figure object containing our plot
 
     """
-    marker_colour = {('sim1', 'av2015'): 'blue', ('sim2', 'av2017'): 'lightskyblue'}
     fig = go.Figure()
     # For each pair of source tables to compare, plot the z-test statistics by value in a given field, highlighting high absolute values
     for pair, comparison_table in results_dict.items():
@@ -68,7 +72,8 @@ def plot_univariate_categorical_results(results_dict, col_name):
 def plot_bivariate_categorical_results(results_dict, col_name1, col_name2, display=True):
     r"""Produces heatmaps of z-test statistics by field value pairs.
 
-    Produces a dictionary of interactive heatmaps of z-test statistics based on value counts in field value pairs for the given pair of data fields. One heatmap is created for each table of z-test results passed in the input dictionary.
+    Produces a dictionary of interactive heatmaps of z-test statistics based on value counts in field value pairs for the given pair of data fields. 
+    One heatmap is created for each table of z-test results passed in the input dictionary.
 
     Parameters
     ----------
@@ -78,6 +83,8 @@ def plot_bivariate_categorical_results(results_dict, col_name1, col_name2, displ
         The name of the column in our dataframe we use to obtain the values for the x-axis.
     col_name2 : str
         The name of the column in our dataframe we use to obtain the values for the y-axis.
+    display : Boolean. Defaults to True
+        Set display to False to return the dictionary of heatmaps directly, otherwise running the function immediately displays the plots upon completion.
 
     Returns
     -------
@@ -144,12 +151,13 @@ def plot_bivariate_categorical_results(results_dict, col_name1, col_name2, displ
 def make_hovertext(table, column_labels):
     r"""Create a Series of hovertext strings for a list of columns in a DataFrame for use in Plotly.
     
-    Returns a Series of the same length as the input DataFrame containing hovertext strings detailing the values in the passed list of columns"""
+    Returns a Series of the same length as the input DataFrame containing hovertext strings detailing the values in the passed list of columns
+    """
     string_series = pd.concat([table[label].apply(lambda val: '{}={}<br>'.format(label, val)) for label in column_labels], axis=1).sum(axis=1)
     return string_series
 
 
-def plot_univariate_chi2_test_results(results_dict):
+def plot_univariate_chi2_test_results(results_dict, by='Wilson–Hilferty_score'):
     r"""Produces grouped bar charts of chi-squared test statistics by field.
 
     Produces interactive grouped bar charts of chi-squared test statistics based on value counts in each field.
@@ -166,22 +174,106 @@ def plot_univariate_chi2_test_results(results_dict):
         The Figure object containing our plot
 
     """
-    marker_colour = {('sim1', 'av2015'): 'blue', ('sim2', 'av2017'): 'lightskyblue'}
     fig = go.Figure()
-    # For each pair of source tables to compare, plot the z-test statistics by value in a given field, highlighting high absolute values
+    # For each pair of source tables to compare, plot a horizontal bar chart of the chi-squared test statistics
+    # 
     for pair, results_table in results_dict.items():
         fig.add_trace(go.Bar(name=pair[0]+' vs. '+pair[1],
                              orientation='h',
-                             x=results_table.normalized_score,
+                             x=results_table[by],
                              y=results_table.index, 
                              marker_color=marker_colour[pair],
                              hoverinfo="name+y+text",
-                             hovertext=make_hovertext(results_table, ['pearson_chi2_test', 'degrees_of_freedom', 'normalized_score'])))
-    # Change the bar mode, set axis titles
+                             hovertext=make_hovertext(results_table, ['pearson_chi2_test', 'degrees_of_freedom', 'normalized_score', 'Wilson–Hilferty_score'])))
+    # Change the bar mode, set axis titles, and sort the bar lengths
     fig.update_layout(barmode='group', 
-                      xaxis_title='Normalized score', 
+                      xaxis_title=by, 
                       yaxis_title='Field name', 
-                      title='Univariate chi-squared test results', 
+                      title='Univariate chi-squared test results',
+                      xaxis_type='log',
                       yaxis_categoryorder='total ascending')
     return fig
 
+
+def plot_bivariate_chi2_results(results_dict, by='Wilson–Hilferty_score', display=True):
+    r"""Produces heatmaps of chi-squared test statistics by field value pairs.
+
+    Produces a dictionary of interactive heatmaps of chi-squared test statistics based on category sizes for categories defined by values in a pair of data fields. 
+    One heatmap is created for each table of chi-squared test results passed in the input dictionary.
+
+    Parameters
+    ----------
+    results_dict : dictionary of pandas DataFrame objects
+        The dataframes of chi-squared test results from which we draw the data to plot
+    display : Boolean. Defaults to True
+        Set display to False to return the dictionary of heatmaps directly, otherwise running the function immediately displays the plots upon completion.
+        
+    Returns
+    -------
+    A dictionary of plotly.graph_objects Figures
+        The Figure objects containing our plots, one per table of chi-squared test results
+
+    """
+    # Create a plot for each table of chi-squared test statistics comparing two source tables
+    fig = {pair: go.Figure() for pair in results_dict.keys()}
+    for pair, results_table in results_dict.items():
+        # Create the hovertext strings for each pair of fields
+        hovertext_table = make_hovertext(results_table, ['pearson_chi2_test', 'degrees_of_freedom', 'normalized_score', 'Wilson–Hilferty_score'])
+        # Reset indices to make it easier to select the data
+        results_table = results_table.reset_index()
+        hovertext_table = hovertext_table.reset_index()
+        # Get the list of values for the x,y-axes
+        x_vals = y_vals = field_list_dict['univariate_categorical']
+        # The z-values are used to colour the heatmap and are stored in a 2D-array. Rows for y-values, columns for x-values.
+        z_vals = list()
+        hovertext_array = list()
+        for y_val in y_vals:
+            z_row = list()
+            hovertext_row = list()
+            for x_val in x_vals:
+                string_query = "column_name1 in ['{0}', '{1}'] and column_name2 in ['{0}', '{1}']".format(x_val, y_val)
+                x_y_subframe = results_table.query(string_query)                
+                # Equivalently, ...                
+#                 row_mask = results_table[['column_name1', 'column_name2']].isin([x_val, y_val]).all(axis=1)
+#                 x_y_subframe = results_table.loc[row_mask]
+                # Check that there is any data for the given x,y-pair
+                if x_y_subframe.shape[0] == 1:
+                    # If there is, then add it to our array
+                    z_row.append(x_y_subframe[by].iloc[0])
+                    hovertext_row.append(hovertext_table.query(string_query)[0].iloc[0])
+                else:
+                    # Otherwise add a null value
+                    z_row.append(np.nan)
+                    hovertext_row.append("")
+            z_vals.append(z_row)
+            hovertext_array.append(hovertext_row)
+        # Plot the heatmap based on the x,y,z-values we extracted from the results table
+        fig[pair].add_trace(go.Heatmap(name=pair[0]+' vs. '+pair[1], z=z_vals, x=x_vals, y=y_vals, 
+                                       hovertext=hovertext_array,                                       
+                                       colorscale=[
+                                           [0, 'rgb(247, 251, 255)'],
+                                           [1./100000, 'rgb(222, 235, 247)'],
+                                           [1./20000, 'rgb(198, 219, 239)'],
+                                           [1./10000, 'rgb(158, 202, 225)'],
+                                           [1./5000, 'rgb(107, 174, 214)'],
+                                           [1./1000, 'rgb(66, 146, 198)'],
+                                           [1./100, 'rgb(33, 113, 181)'],
+                                           [1./10, 'rgb(8, 81, 156)'],
+                                           [1., 'rgb(8, 48, 107)']], 
+                                       zmin=0, zmax=100000, 
+                                       colorbar={'title': by, 
+                                                 'tick0': 0,
+                                                 'tickmode': 'array',
+                                                 'tickvals': [0, 10, 100, 1000, 5000, 10000, 20000, 100000]
+                                                }))
+        # Set graph and axis titles
+        fig[pair].update_layout(title=pair[0]+' vs. '+pair[1],
+                                xaxis_title='Field 1', 
+                                yaxis_title='Field 2')
+    if display == True:
+    # Display the plots!
+        for key, plot in fig.items():
+            plot.show()
+        return
+    else:
+        return fig
